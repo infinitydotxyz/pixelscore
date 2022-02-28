@@ -1,6 +1,9 @@
 # input files
 results*.json
 
+# data folders
+data
+
 # exported data files
 *exported.csv
 
