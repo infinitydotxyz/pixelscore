@@ -4,10 +4,12 @@ import { promisify } from 'util';
 import axios from 'axios';
 import { createWriteStream, mkdirSync } from 'fs';
 import path from 'path';
+import fs from 'fs';
+import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
 
 const finished = promisify(stream.finished);
 
-import serviceAccount from './creds/nftc-dev-firebase-creds.json';
+import serviceAccount from './creds/nftc-infinity-firebase-creds.json';
 fbAdmin.initializeApp({
   credential: fbAdmin.credential.cert(serviceAccount as fbAdmin.ServiceAccount),
   storageBucket: 'infinity-static'
@@ -15,7 +17,6 @@ fbAdmin.initializeApp({
 
 const db = fbAdmin.firestore();
 const bucket = fbAdmin.storage().bucket();
-
 interface PixelScore {
   pixelScore: number;
 }
@@ -27,20 +28,21 @@ async function saveScore(chainId: string, collection: string, tokenId: string, s
   });
 }
 
-async function fetchOSImages(chainId: string, collection: string) {
-  const dir = path.join(__dirname, 'data', collection, 'resized');
+async function fetchOSImages(tokens: QuerySnapshot<DocumentData>, dir: string) {
   mkdirSync(dir, { recursive: true });
-  const tokens = await db.collection('collections').doc(`${chainId}:${collection}`).collection('nfts').get();
   tokens.forEach((token) => {
     const url = token.data().image.url as string;
     const tokenId = token.data().tokenId;
     const localFile = path.join(dir, tokenId);
-    if (url.indexOf('lh3') > 0) {
-      const url224 = url + '=s224';
-      console.log('Downloading', url224);
-      downloadImage(url224, localFile).catch((err) => console.log('error downloading', url224, err));
-    } else {
-      console.log('not os image');
+    // check if file already exists
+    if (!fs.existsSync(localFile)) {
+      if (url.indexOf('lh3') > 0) {
+        const url224 = url + '=s224';
+        console.log('Downloading', url224);
+        downloadImage(url224, localFile).catch((err) => console.log('error downloading', url224, err));
+      } else {
+        console.error('not os image');
+      }
     }
   });
 }
@@ -58,8 +60,25 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
 
 async function main() {
   const chainId = process.argv[2];
-  const address = process.argv[3];
-  await fetchOSImages(chainId, address);
+  const address = process.argv[3].trim().toLowerCase();
+  const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
+  // check if collection indexing is complete
+  const status = collectionDoc?.data()?.state.create.step;
+  if (status !== 'complete') {
+    console.error('Collection indexing is not complete for', address);
+    return;
+  }
+  const tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
+  const numTokens = tokens.size;
+  const dir = path.join(__dirname, 'data', address, 'resized');
+  await fetchOSImages(tokens, dir);
+  // check if num images downloaded is equal to numtokens
+  const numImages = fs.readdirSync(dir).length;
+  if (numImages !== numTokens) {
+    console.error('not all images are downloaded; numTokens', numTokens, 'num images downloaded', numImages);
+  } else {
+    console.log('===================== Done =========================');
+  }
 }
 
 main();
