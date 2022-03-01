@@ -9,7 +9,7 @@ import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
 
 const finished = promisify(stream.finished);
 
-import serviceAccount from './creds/nftc-infinity-firebase-creds.json';
+import serviceAccount from './creds/nftc-dev-firebase-creds.json';
 fbAdmin.initializeApp({
   credential: fbAdmin.credential.cert(serviceAccount as fbAdmin.ServiceAccount),
   storageBucket: 'infinity-static'
