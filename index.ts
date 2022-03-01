@@ -9,7 +9,7 @@ import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
 
 const finished = promisify(stream.finished);
 
-import serviceAccount from './creds/nftc-infinity-firebase-creds.json';
+import serviceAccount from './creds/nftc-dev-firebase-creds.json';
 fbAdmin.initializeApp({
   credential: fbAdmin.credential.cert(serviceAccount as fbAdmin.ServiceAccount),
   storageBucket: 'infinity-static'
@@ -58,7 +58,16 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
   });
 }
 
-async function main() {
+async function sleep(duration: number): Promise<void> {
+  return await new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, duration);
+  });
+}
+
+let tokens: QuerySnapshot;
+async function main(retries: number) {
   const chainId = process.argv[2];
   const address = process.argv[3].trim().toLowerCase();
   const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
@@ -68,7 +77,9 @@ async function main() {
     console.error('Collection indexing is not complete for', address);
     return;
   }
-  const tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
+  if (tokens.size == 0) {
+    tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
+  }
   const numTokens = tokens.size;
   const dir = path.join(__dirname, 'data', address, 'resized');
   await fetchOSImages(tokens, dir);
@@ -76,9 +87,14 @@ async function main() {
   const numImages = fs.readdirSync(dir).length;
   if (numImages !== numTokens) {
     console.error('not all images are downloaded; numTokens', numTokens, 'num images downloaded', numImages);
+    if (retries > 0) {
+      console.log('retrying in 5 seconds');
+      await sleep(5 * 1000);
+      main(--retries);
+    }
   } else {
     console.log('===================== Done =========================');
   }
 }
 
-main();
+main(3);
