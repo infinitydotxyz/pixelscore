@@ -38,7 +38,7 @@ async function fetchOSImages(tokens: QuerySnapshot<DocumentData>, dir: string) {
     if (!fs.existsSync(localFile)) {
       if (url.indexOf('lh3') > 0) {
         const url224 = url + '=s224';
-        console.log('Downloading', url224);
+        console.log('Downloading', url);
         downloadImage(url224, localFile).catch((err) => console.log('error downloading', url224, err));
       } else {
         console.error('not os image');
@@ -66,7 +66,7 @@ async function sleep(duration: number): Promise<void> {
   });
 }
 
-let tokens: QuerySnapshot;
+let tokens: fbAdmin.firestore.QuerySnapshot<fbAdmin.firestore.DocumentData>;
 async function main(retries: number) {
   const chainId = process.argv[2];
   const address = process.argv[3].trim().toLowerCase();
@@ -77,7 +77,8 @@ async function main(retries: number) {
     console.error('Collection indexing is not complete for', address);
     return;
   }
-  if (tokens.size == 0) {
+  if (!tokens) {
+    console.log('============================== Fetching tokens from firestore =================================');
     tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
   }
   const numTokens = tokens.size;
@@ -97,4 +98,4 @@ async function main(retries: number) {
   }
 }
 
-main(3);
+main(1);
