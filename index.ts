@@ -6,8 +6,7 @@ import { createWriteStream, mkdirSync } from 'fs';
 import path from 'path';
 import fs from 'fs';
 import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
-
-const finished = promisify(stream.finished);
+import { execSync } from 'child_process';
 
 import serviceAccount from './creds/nftc-dev-firebase-creds.json';
 fbAdmin.initializeApp({
@@ -17,10 +16,14 @@ fbAdmin.initializeApp({
 
 const db = fbAdmin.firestore();
 const bucket = fbAdmin.storage().bucket();
+const finished = promisify(stream.finished);
+const METADATA_FILE_NAME = 'metadata.csv';
+
 interface PixelScore {
   pixelScore: number;
 }
 
+// not used
 async function saveScore(chainId: string, collection: string, tokenId: string, score: PixelScore) {
   const tokenDoc = db.collection('collections').doc(`${chainId}:${collection}`).collection('nfts').doc(tokenId);
   tokenDoc.set(score, { merge: true }).catch((err) => {
@@ -28,7 +31,26 @@ async function saveScore(chainId: string, collection: string, tokenId: string, s
   });
 }
 
+function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
+  console.log('============================== Writing metadata =================================');
+  mkdirSync(dir, { recursive: true });
+  const metadataFile = path.join(dir, METADATA_FILE_NAME);
+  let lines = '';
+  tokens.forEach((token) => {
+    const data = token.data();
+    if (!data) {
+      console.error('data is null for token', token);
+      return;
+    }
+    lines += `${data.tokenId},${data.rarityScore},${data.rarityRank},${data.image?.url}\n`;
+  });
+  // write file
+  fs.writeFileSync(metadataFile, lines);
+  console.log('============================== Metadata written successfully =================================');
+}
+
 async function fetchOSImages(tokens: QuerySnapshot<DocumentData>, dir: string) {
+  console.log('============================== Downloading images =================================');
   mkdirSync(dir, { recursive: true });
   tokens.forEach((token) => {
     const url = token.data().image.url as string;
@@ -41,7 +63,7 @@ async function fetchOSImages(tokens: QuerySnapshot<DocumentData>, dir: string) {
         console.log('Downloading', url);
         downloadImage(url224, localFile).catch((err) => console.log('error downloading', url224, err));
       } else {
-        console.error('not os image');
+        console.error('Not OpenSea image');
       }
     }
   });
@@ -56,6 +78,27 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
     response.data.pipe(createWriteStream(outputLocationPath));
     return finished(createWriteStream(outputLocationPath));
   });
+}
+
+async function validate(numTokens: number, imagesDir: string, metadataDir: string, retries: number): Promise<void> {
+  console.log('============================== Validating =================================');
+  const numImages = fs.readdirSync(imagesDir).length;
+  const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
+  const numLines = parseInt(execSync(`cat ${metadataFile} | wc -l`).toString().trim());
+  // check if num images downloaded is equal to numtokens
+  if (numImages !== numTokens) {
+    console.error('Not all images are downloaded; numTokens', numTokens, 'num images downloaded', numImages);
+    if (retries > 0) {
+      console.log('Retrying in 120 seconds');
+      await sleep(120 * 1000);
+      main(--retries);
+    }
+  } else if (numLines !== numTokens) {
+    // check if num lines in metadata file is equal to numtokens
+    console.error('Not all metadata is written; numTokens', numTokens, 'metadata written for', numLines);
+  } else {
+    console.log('===================== Done =========================');
+  }
 }
 
 async function sleep(duration: number): Promise<void> {
@@ -82,20 +125,17 @@ async function main(retries: number) {
     tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
   }
   const numTokens = tokens.size;
-  const dir = path.join(__dirname, 'data', address, 'resized');
-  await fetchOSImages(tokens, dir);
-  // check if num images downloaded is equal to numtokens
-  const numImages = fs.readdirSync(dir).length;
-  if (numImages !== numTokens) {
-    console.error('not all images are downloaded; numTokens', numTokens, 'num images downloaded', numImages);
-    if (retries > 0) {
-      console.log('retrying in 5 seconds');
-      await sleep(5 * 1000);
-      main(--retries);
-    }
-  } else {
-    console.log('===================== Done =========================');
-  }
+
+  // fetch metadata
+  const metadataDir = path.join(__dirname, 'data', address, 'metadata');
+  fetchMetadata(tokens, metadataDir);
+
+  // fetch images
+  const imagesDir = path.join(__dirname, 'data', address, 'resized');
+  await fetchOSImages(tokens, imagesDir);
+
+  // validate
+  await validate(numTokens, imagesDir, metadataDir, retries);
 }
 
 main(1);
