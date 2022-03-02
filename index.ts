@@ -17,6 +17,9 @@ fbAdmin.initializeApp({
 const db = fbAdmin.firestore();
 const bucket = fbAdmin.storage().bucket();
 const finished = promisify(stream.finished);
+const DATA_DIR = 'data';
+const IMAGES_DIR = 'resized';
+const METADATA_DIR = 'metadata';
 const METADATA_FILE_NAME = 'metadata.csv';
 
 interface PixelScore {
@@ -39,7 +42,7 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
   tokens.forEach((token) => {
     const data = token.data();
     if (!data) {
-      console.error('data is null for token', token);
+      console.error('Data is null for token', token);
       return;
     }
     lines += `${data.tokenId},${data.rarityScore},${data.rarityRank},${data.image?.url}\n`;
@@ -80,24 +83,38 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
   });
 }
 
-async function validate(numTokens: number, imagesDir: string, metadataDir: string, retries: number): Promise<void> {
+async function validate(
+  numTokens: number,
+  imagesDir: string,
+  metadataDir: string,
+  chainId: string,
+  address: string,
+  retries: number,
+  retryAfter: number
+): Promise<void> {
   console.log('============================== Validating =================================');
   const numImages = fs.readdirSync(imagesDir).length;
   const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
   const numLines = parseInt(execSync(`cat ${metadataFile} | wc -l`).toString().trim());
   // check if num images downloaded is equal to numtokens
   if (numImages !== numTokens) {
-    console.error('Not all images are downloaded; numTokens', numTokens, 'num images downloaded', numImages);
+    console.error(
+      'Not all images are downloaded; numTokens',
+      numTokens,
+      'num images downloaded',
+      numImages,
+      `waiting ${retryAfter} seconds for download to finish. Ignore any errors for now.`
+    );
     if (retries > 0) {
-      console.log('Retrying in 120 seconds');
-      await sleep(120 * 1000);
-      main(--retries);
+      console.log(`Retrying in ${retryAfter} seconds`);
+      await sleep(retryAfter * 1000);
+      run(chainId, address, --retries, retryAfter);
     }
   } else if (numLines !== numTokens) {
     // check if num lines in metadata file is equal to numtokens
     console.error('Not all metadata is written; numTokens', numTokens, 'metadata written for', numLines);
   } else {
-    console.log('===================== Done =========================');
+    console.log('============================== Done =================================');
   }
 }
 
@@ -110,13 +127,10 @@ async function sleep(duration: number): Promise<void> {
 }
 
 let tokens: fbAdmin.firestore.QuerySnapshot<fbAdmin.firestore.DocumentData>;
-async function main(retries: number) {
-  if (process.argv.length !== 4) {
-    console.error('Usage: node index.js <chainId> <collectionAddress>');
-    process.exit(1);
-  }
-  const chainId = process.argv[2];
-  const address = process.argv[3].trim().toLowerCase();
+async function run(chainId: string, address: string, retries: number, retryAfter: number) {
+  console.log(
+    `============ Fetching data with max ${retries} retries and ${retryAfter} second retry interval ============`
+  );
   const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
   // check if collection indexing is complete
   const status = collectionDoc?.data()?.state.create.step;
@@ -131,15 +145,35 @@ async function main(retries: number) {
   const numTokens = tokens.size;
 
   // fetch metadata
-  const metadataDir = path.join(__dirname, 'data', address, 'metadata');
+  const metadataDir = path.join(__dirname, DATA_DIR, address, METADATA_DIR);
   fetchMetadata(tokens, metadataDir);
 
   // fetch images
-  const imagesDir = path.join(__dirname, 'data', address, 'resized');
+  const imagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
   await fetchOSImages(tokens, imagesDir);
 
   // validate
-  await validate(numTokens, imagesDir, metadataDir, retries);
+  await validate(numTokens, imagesDir, metadataDir, chainId, address, retries, retryAfter);
 }
 
-main(1);
+async function main() {
+  if (process.argv.length < 4) {
+    console.error(
+      'Usage: node index.js <chainId> <collectionAddress> <optional: number of retries (default 3)> <optional: retry after seconds (default 120)>'
+    );
+    process.exit(1);
+  }
+  const chainId = process.argv[2];
+  const address = process.argv[3].trim().toLowerCase();
+  let retries = parseInt(process.argv[4]);
+  if (!retries) {
+    retries = 3;
+  }
+  let retryAfter = parseInt(process.argv[5]);
+  if (!retryAfter) {
+    retryAfter = 120;
+  }
+  await run(chainId, address, retries, retryAfter);
+}
+
+main();
