@@ -111,6 +111,10 @@ async function sleep(duration: number): Promise<void> {
 
 let tokens: fbAdmin.firestore.QuerySnapshot<fbAdmin.firestore.DocumentData>;
 async function main(retries: number) {
+  if (process.argv.length !== 4) {
+    console.error('Usage: node index.js <chainId> <collectionAddress>');
+    process.exit(1);
+  }
   const chainId = process.argv[2];
   const address = process.argv[3].trim().toLowerCase();
   const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
