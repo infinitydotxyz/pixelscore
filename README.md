@@ -16,15 +16,18 @@ pip3 install -r requirements.txt
 
 ## Make proper dirt structure
 
-base_dir, typically /mnt/disks/ssd/data or /mnt/disks/ssd/data_backup
+base_dir, typically /mnt/disks/ssd/data or /mnt/disks/ssd/data_backup  
+
 base_dir contains a folder per collection_id e.g.
-/mnt/disks/ssd/data/0x9a534628b4062e123ce7ee2222ec20b86e16ca8f 
-each colelction folder contrains the following:
-metadata -  a .csv file with ground truth rarityScores (not pixel scores)
-numpy - images and labels in np format (X_train, y_train)
-resized - raw nft images 224x224
-tf_logs - model checkpoint trained on the given collection, write access must be given to tf_logs
-pixelscore - a .csv file with newly computed pixelscores
+/mnt/disks/ssd/data/0x9a534628b4062e123ce7ee2222ec20b86e16ca8f  
+
+each colelction folder contrains the following:  
+metadata -  a .csv file with ground truth rarityScores (not pixel scores)  
+numpy - images and labels in np format (X_train, y_train). 
+resized - raw nft images 224x224  
+tf_logs - model checkpoint trained on the given collection, write access must be given to tf_logs  
+pixelscore - a .csv file with newly computed pixelscores  
+hist.png - histgram with pixel scores for this collection  
 
 ## How to run .py scripts
 
