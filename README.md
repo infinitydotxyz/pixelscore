@@ -33,19 +33,19 @@ Call for 1 colelction at a time, takes around 10% of RAM, completes in 2 hours.
 ## Convert nft images to numpy arrays
 
 ```sh
-python3 pixelscore_service/within_collection_score/img_to_numpy.py
+python3 pixelscore_service/within_collection_score/img_to_numpy.py --collection_id=0x004f5683e183908d0f6b688239e3e2d5bbb066ca
 ```
 
 ## Train model on the given collection
 
 ```sh
-python3 pixelscore_service/within_collection_score/train_model.py
+python3 pixelscore_service/within_collection_score/train_model.py --collection_id=0x004f5683e183908d0f6b688239e3e2d5bbb066ca
 ```
 
 ## Run main.py from root dir to compute rarity scores
 
 ```
-python3 pixelscore_service/within_collection_score/main.py
+python3 pixelscore_service/within_collection_score/main.py --collection_id=0x004f5683e183908d0f6b688239e3e2d5bbb066ca
 ```
 
 ## Check rarity scores.
