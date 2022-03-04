@@ -39,6 +39,7 @@ from numpy import savez_compressed
 # Functions for loading model and scoring one collection of NFTs.
 FLAGS = flags.FLAGS
 N_CLASSES = 10
+EPOCHS = 10
 # Num classes to binarize ground teruth rarity score.
 GROUND_TRUTH_N_CLASSES = 10
 N_CLASSES_STANDARD_MODEL = 1000
@@ -320,6 +321,9 @@ def get_scores_collection(X_train, ids):
 def train_model(base_dir, collection_id, model, X_train, y_train):
     """Trains (fine-tunes) base model on the given collection."""
     tf_logs = base_dir + '/{}'.format(collection_id) + '/tf_logs'
+    if not os.path.exists(tf_logs):
+        os.system('sudo mkdir {}'.format(tf_logs))
+    os.system('sudo chmod ugo+rwx {}'.format(tf_logs)) 
     # Compile.
     # Recommended lr = 0.001
     model.compile(
@@ -334,7 +338,7 @@ def train_model(base_dir, collection_id, model, X_train, y_train):
                model_checkpoint(tf_logs,"model.ckpt")]
     hist = model.fit(
     x = X_train, y = y_train,
-    epochs=1, steps_per_epoch=steps_per_epoch,
+    epochs=EPOCHS, steps_per_epoch=steps_per_epoch,
     validation_data=(X_train, y_train), callbacks = callbacks_).history
     
     model.save(tf_logs + '/model')
