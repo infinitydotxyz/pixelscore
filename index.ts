@@ -63,7 +63,7 @@ async function fetchOSImages(tokens: QuerySnapshot<DocumentData>, dir: string) {
     if (!fs.existsSync(localFile)) {
       if (url.indexOf('lh3') > 0) {
         const url224 = url + '=s224';
-        console.log('Downloading', url);
+        // console.log('Downloading', url);
         downloadImage(url224, localFile).catch((err) => console.log('error downloading', url224, err));
       } else {
         console.error('Not OpenSea image');
@@ -80,6 +80,8 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
   }).then(async (response) => {
     response.data.pipe(createWriteStream(outputLocationPath));
     return finished(createWriteStream(outputLocationPath));
+  }).catch(err => {
+    // do nothing
   });
 }
 
@@ -137,7 +139,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     console.error('Collection indexing is not complete for', address);
     return;
   }
-  console.log('============================== Fetching tokens from firestore =================================');
+  console.log(`============================== Fetching tokens from firestore for ${address} =================================`);
   let tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
   const numTokens = tokens.size;
 
