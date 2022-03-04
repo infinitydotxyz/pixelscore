@@ -126,7 +126,6 @@ async function sleep(duration: number): Promise<void> {
   });
 }
 
-let tokens: fbAdmin.firestore.QuerySnapshot<fbAdmin.firestore.DocumentData>;
 async function run(chainId: string, address: string, retries: number, retryAfter: number) {
   console.log(
     `============ Fetching data with max ${retries} retries and ${retryAfter} second retry interval ============`
@@ -138,10 +137,8 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     console.error('Collection indexing is not complete for', address);
     return;
   }
-  if (!tokens) {
-    console.log('============================== Fetching tokens from firestore =================================');
-    tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
-  }
+  console.log('============================== Fetching tokens from firestore =================================');
+  let tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
   const numTokens = tokens.size;
 
   // fetch metadata
@@ -157,23 +154,37 @@ async function run(chainId: string, address: string, retries: number, retryAfter
 }
 
 async function main() {
-  if (process.argv.length < 4) {
-    console.error(
-      'Usage: node index.js <chainId> <collectionAddress> <optional: number of retries (default 3)> <optional: retry after seconds (default 120)>'
-    );
-    process.exit(1);
-  }
-  const chainId = process.argv[2];
-  const address = process.argv[3].trim().toLowerCase();
-  let retries = parseInt(process.argv[4]);
+  console.log(
+    'Usage for all indexed collection: node index.js <optional: number of retries (default 3)> <optional: retry after seconds (default 120)>'
+  );
+  console.log(
+    'Usage for individual collection: node index.js <optional: number of retries (default 3)> <optional: retry after seconds (default 120)> <chainId> <collectionAddress>'
+  );
+  let retries = parseInt(process.argv[2]);
   if (!retries) {
     retries = 3;
   }
-  let retryAfter = parseInt(process.argv[5]);
+  let retryAfter = parseInt(process.argv[3]);
   if (!retryAfter) {
     retryAfter = 120;
   }
-  await run(chainId, address, retries, retryAfter);
+  let chainId, address;
+  if (process.argv.length == 6) {
+    chainId = process.argv[4];
+    address = process.argv[5].trim().toLowerCase();
+    await run(chainId, address, retries, retryAfter);
+  } else {
+    // fetch completed collections from firestore
+    console.log(
+      '============================== Fetching completed collections from firestore ================================='
+    );
+    const colls = await db.collection('collections').where('state.create.step', '==', 'complete').get();
+    colls.forEach(async (coll) => {
+      chainId = await coll.get('chainId');
+      address = await coll.get('address');
+      await run(chainId, address, retries, retryAfter);
+    });
+  }
 }
 
 main();
