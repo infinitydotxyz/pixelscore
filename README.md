@@ -1,7 +1,8 @@
 # pixelscore
 
-***Install Deps***
+##Install Deps
 
+```sh
 sudo apt-get install build-essential gfortran libatlas-base-dev python-pip python-dev
 sudo apt-get install pkg-config
 sudo pip install --upgrade pip
@@ -11,8 +12,9 @@ sudo apt-get install libatlas-base-dev
 pip3 install -U pip
 pip3 install -U tensorflow==2.8.0
 pip3 install -r requirements.txt
+```
 
-***Make proper dirt structure***
+##Make proper dirt structure
 
 base_dir, typically /mnt/disks/ssd/data or /mnt/disks/ssd/data_backup
 base_dir contains a folder per collection_id e.g.
