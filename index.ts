@@ -157,10 +157,10 @@ async function run(chainId: string, address: string, retries: number, retryAfter
 
 async function main() {
   console.log(
-    'Usage for all indexed collection: node index.js <optional: number of retries (default 3)> <optional: retry after seconds (default 120)>'
+    'Usage for all indexed collection: node index.js <optional: number of retries (default 3)> <optional: retry after seconds (default 60)>'
   );
   console.log(
-    'Usage for individual collection: node index.js <optional: number of retries (default 3)> <optional: retry after seconds (default 120)> <chainId> <collectionAddress>'
+    'Usage for individual collection: node index.js <optional: number of retries (default 3)> <optional: retry after seconds (default 60)> <chainId> <collectionAddress>'
   );
   let retries = parseInt(process.argv[2]);
   if (!retries) {
@@ -168,7 +168,7 @@ async function main() {
   }
   let retryAfter = parseInt(process.argv[3]);
   if (!retryAfter) {
-    retryAfter = 120;
+    retryAfter = 60;
   }
   let chainId, address;
   if (process.argv.length == 6) {
