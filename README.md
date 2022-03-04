@@ -54,4 +54,10 @@ python3 pixelscore_service/within_collection_score/main.py --collection_id=0x004
 ## Check rarity scores.
 
 Must be written to /mnt/disks/ssd/data/<COLLELCTION_ID>/pixelscore/pixelscore.csv  
-Histogram of pixelscores available at /mnt/disks/ssd/data/<COLLELCTION_ID>/pixelscore/hist.png. 
+Histogram of pixelscores available at /mnt/disks/ssd/data/<COLLELCTION_ID>/pixelscore/hist.png.
+
+## Script that runs all of the tools above for all collections in the whitelist.
+
+```
+python3 pixelscore_service/within_collection_score/score_all_collections.py --collections_whtelist=whitelist.csv
+```
