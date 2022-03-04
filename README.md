@@ -28,7 +28,7 @@ pixelscore - a .csv file with newly computed pixelscores
 
 ## How to run .py scripts
 
-Call for 1 colelction at a time, takes around 10% of RAM, completes in 2 hours.
+Call for 1 colelction at a time, takes around 10% of RAM, completes in 2 hours. For example, take colelction with chain id 0x004f5683e183908d0f6b688239e3e2d5bbb066ca
 
 ## Convert nft images to numpy arrays
 
