@@ -5,10 +5,10 @@ import axios from 'axios';
 import { createWriteStream, mkdirSync } from 'fs';
 import path from 'path';
 import fs from 'fs';
-import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
+import { QuerySnapshot, DocumentData, QueryDocumentSnapshot } from '@google-cloud/firestore';
 import { execSync } from 'child_process';
 
-import serviceAccount from './creds/nftc-dev-firebase-creds.json';
+import serviceAccount from './creds/nftc-infinity-firebase-creds.json';
 fbAdmin.initializeApp({
   credential: fbAdmin.credential.cert(serviceAccount as fbAdmin.ServiceAccount),
   storageBucket: 'infinity-static'
@@ -77,12 +77,14 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
     method: 'get',
     url,
     responseType: 'stream'
-  }).then(async (response) => {
-    response.data.pipe(createWriteStream(outputLocationPath));
-    return finished(createWriteStream(outputLocationPath));
-  }).catch(err => {
-    // do nothing
-  });
+  })
+    .then(async (response) => {
+      response.data.pipe(createWriteStream(outputLocationPath));
+      return finished(createWriteStream(outputLocationPath));
+    })
+    .catch((err) => {
+      // do nothing
+    });
 }
 
 async function validate(
@@ -93,7 +95,8 @@ async function validate(
   address: string,
   retries: number,
   retryAfter: number
-): Promise<void> {
+): Promise<boolean> {
+  let done = false;
   console.log('============================== Validating =================================');
   const numImages = fs.readdirSync(imagesDir).length;
   const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
@@ -116,8 +119,10 @@ async function validate(
     // check if num lines in metadata file is equal to numtokens
     console.error('Not all metadata is written; numTokens', numTokens, 'metadata written for', numLines);
   } else {
+    done = true;
     console.log('============================== Done =================================');
   }
+  return done;
 }
 
 async function sleep(duration: number): Promise<void> {
@@ -130,7 +135,7 @@ async function sleep(duration: number): Promise<void> {
 
 async function run(chainId: string, address: string, retries: number, retryAfter: number) {
   console.log(
-    `============ Fetching data with max ${retries} retries and ${retryAfter} second retry interval ============`
+    `============ Fetching data for ${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
   );
   const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
   // check if collection indexing is complete
@@ -139,7 +144,9 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     console.error('Collection indexing is not complete for', address);
     return;
   }
-  console.log(`============================== Fetching tokens from firestore for ${address} =================================`);
+  console.log(
+    `============================== Fetching tokens from firestore for ${address} =================================`
+  );
   let tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
   const numTokens = tokens.size;
 
@@ -153,6 +160,14 @@ async function run(chainId: string, address: string, retries: number, retryAfter
 
   // validate
   await validate(numTokens, imagesDir, metadataDir, chainId, address, retries, retryAfter);
+}
+
+async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number) {
+  colls.forEach(async (coll) => {
+    const chainId = coll.get('chainId');
+    const address = coll.get('address');
+    await run(chainId, address, retries, retryAfter);
+  });
 }
 
 async function main() {
@@ -177,15 +192,28 @@ async function main() {
     await run(chainId, address, retries, retryAfter);
   } else {
     // fetch completed collections from firestore
-    console.log(
-      '============================== Fetching completed collections from firestore ================================='
-    );
-    const colls = await db.collection('collections').where('state.create.step', '==', 'complete').get();
-    colls.forEach(async (coll) => {
-      chainId = await coll.get('chainId');
-      address = await coll.get('address');
-      await run(chainId, address, retries, retryAfter);
-    });
+    console.log('============================== Fetching collections from firestore =================================');
+    let startAfter = '';
+    const limit = 10;
+    let done = false;
+    while (!done) {
+      const colls = await db
+        .collection('collections')
+        .orderBy('address', 'asc')
+        .startAfter(startAfter)
+        .limit(limit)
+        .get();
+      console.log('================ START AFTER ===============', startAfter, colls.size);
+
+      // update cursor
+      startAfter = colls.docs[colls.size - 1].get('address');
+
+      // break condition
+      if (colls.size < limit) {
+        done = true;
+      }
+      await runAFew(colls, retries, retryAfter);
+    }
   }
 }
 
