@@ -61,11 +61,14 @@ async function run(chainId: string, address: string) {
 }
 
 async function runAFew(colls: QuerySnapshot<DocumentData>) {
-  colls.forEach(async (coll) => {
-    const chainId = coll.get('chainId');
-    const address = coll.get('address');
-    await run(chainId, address);
-  });
+  for(const coll of colls.docs) {
+    const data = coll.data();
+    if (!data) {
+      console.error('Data is null for collection', coll);
+      continue;
+    }
+    await run(data.chainId, data.address);
+  }
 }
 
 async function main() {
