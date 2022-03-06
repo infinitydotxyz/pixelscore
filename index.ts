@@ -187,9 +187,6 @@ async function main() {
   }
   let chainId, address;
   if (process.argv.length == 4) {
-    console.log(
-      'Usage for individual collection: node index.js <number of retries (maybe 3?)> <retry after seconds (maybe 60?)> <chainId> <collectionAddress>'
-    );
     process.exit(1);
   } else if (process.argv.length == 6) {
     chainId = process.argv[4];
