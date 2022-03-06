@@ -108,7 +108,7 @@ async function validate(
       numTokens,
       'num images downloaded',
       numImages,
-      `waiting ${retryAfter} seconds for download to finish. Ignore any errors for now.`
+      `waiting ${retryAfter} seconds for download to finish. Ignore any errors for now. Retries left: ${retries}`
     );
     if (retries > 0) {
       console.log(`Retrying in ${retryAfter} seconds`);
