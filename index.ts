@@ -66,7 +66,7 @@ async function fetchOSImages(tokens: QuerySnapshot<DocumentData>, dir: string) {
         // console.log('Downloading', url);
         downloadImage(url224, localFile).catch((err) => console.log('error downloading', url224, err));
       } else {
-        console.error('Not OpenSea image');
+        console.error('Not OpenSea image for token', tokenId, url);
       }
     }
   });
