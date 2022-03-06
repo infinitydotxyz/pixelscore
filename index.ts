@@ -186,7 +186,12 @@ async function main() {
     retryAfter = 60;
   }
   let chainId, address;
-  if (process.argv.length == 6) {
+  if (process.argv.length == 4) {
+    console.log(
+      'Usage for individual collection: node index.js <number of retries (maybe 3?)> <retry after seconds (maybe 60?)> <chainId> <collectionAddress>'
+    );
+    process.exit(1);
+  } else if (process.argv.length == 6) {
     chainId = process.argv[4];
     address = process.argv[5].trim().toLowerCase();
     await run(chainId, address, retries, retryAfter);
