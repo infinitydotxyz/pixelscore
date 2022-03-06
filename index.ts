@@ -172,7 +172,7 @@ async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number
 
 async function main() {
   console.log(
-    'Usage for all indexed collections: node index.js <optional: number of retries (default 3)> <optional: retry after seconds (default 60)>'
+    'Usage for all collections: node index.js <optional: number of retries (default 3)> <optional: retry after seconds (default 60)>'
   );
   console.log(
     'Usage for individual collection: node index.js <number of retries (maybe 3?)> <retry after seconds (maybe 60?)> <chainId> <collectionAddress>'

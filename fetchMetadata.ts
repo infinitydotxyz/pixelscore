@@ -69,8 +69,8 @@ async function runAFew(colls: QuerySnapshot<DocumentData>) {
 }
 
 async function main() {
-  console.log('Usage for all indexed collections: node fetchMetadataForCollections.js');
-  console.log('Usage for individual collection: node fetchMetadataForCollections.js <chainId> <collectionAddress>');
+  console.log('Usage for all collections: node fetchMetadata.js');
+  console.log('Usage for individual collection: node fetchMetadata.js <chainId> <collectionAddress>');
   let chainId, address;
   if (process.argv.length == 4) {
     chainId = process.argv[2];
