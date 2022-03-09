@@ -50,7 +50,7 @@ def main(argv):
         whitelist = df['colelction_id'].values
     else:
         whitelist = os.listdir(FLAGS.base_dir)
-    for collection_id if whitelist:
+    for collection_id in whitelist:
       print('Start computing pixelscores for collection {}'.format(collection_id))
       try:
         os.system('python3 pixelscore_service/within_collection_score/img_to_numpy.py --collection_id={} --base_dir={}'.format(collection_id, FLAGS.base_dir))
