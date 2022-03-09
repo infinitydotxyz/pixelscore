@@ -258,7 +258,7 @@ def train_model(base_dir, collection_id, model, X_train, y_train):
     tf_logs = base_dir + '/{}'.format(collection_id) + '/tf_logs'
     if not os.path.exists(tf_logs):
         os.system('sudo mkdir {}'.format(tf_logs))
-    os.system('sudo chmod ugo+rwx {}'.format(tf_logs))
+    os.system('sudo chmod -R ugo+rwx {}'.format(tf_logs))
     # Compile model.
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=LR),
