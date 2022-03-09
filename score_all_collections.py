@@ -37,21 +37,25 @@ flags.DEFINE_boolean(
     'use_checkpoint',
     True,
     'Whether to use model checkpoint transfer learned for the given collection. If False, base EfficientNet with imagenet weights is used.')
+flags.DEFINE_boolean(
+    'use_whitelist',
+    False,
+    'Whether to use collections whitelist or score all colelctions found in base_dir.')
 
 def main(argv):
     if FLAGS.collection_whitelist is None:
         print('Collection whitelist not specified.')
-    df = pd.read_csv(FLAGS.collection_whitelist)
-    whitelist = df['colelction_id'].values
-    for colelction_id if whitelist:
-      # Find which filed the collection data lies e.g. data or backup<K>
-      base_dir = 
-      
+    if FLAGS.use_whitelist:    
+        df = pd.read_csv(FLAGS.collection_whitelist)
+        whitelist = df['colelction_id'].values
+    else:
+        whitelist = os.listdir(FLAGS.base_dir)
+    for collection_id if whitelist:
+      print('Start computing pixelscores for collection {}'.format(collection_id))
       try:
-        os.system('python3 pixelscore_service/within_collection_score/img_to_numpy.py --collection_id={} --base_dir={}'.format(collection_id, base_dir))
-        os.system('python3 pixelscore_service/within_collection_score/train_model.py --collection_id={} --base_dir={}'.format(collection_id, base_dir))
-        os.system('python3 pixelscore_service/within_collection_score/main.py --collection_id={} --base_dir={}'.format(collection_id, base_dir))
-        print('Successfully computed pixelscores for collection {}'.format(collection_id))
+        os.system('python3 pixelscore_service/within_collection_score/img_to_numpy.py --collection_id={} --base_dir={}'.format(collection_id, FLAGS.base_dir))
+        os.system('python3 pixelscore_service/within_collection_score/train_model.py --collection_id={} --base_dir={}'.format(collection_id, FLAGS.base_dir))
+        os.system('python3 pixelscore_service/within_collection_score/main.py --collection_id={} --base_dir={}'.format(collection_id, FLAGS.base_dir))
       except:
         print('Unable to compute pixelscores for collection {}, trying next one'.format(collection_id))
        
