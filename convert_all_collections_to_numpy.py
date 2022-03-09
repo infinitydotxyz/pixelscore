@@ -34,10 +34,10 @@ flags.DEFINE_boolean(
 
 def main(argv):
     base_dir = FLAGS.base_dir
-    whitelist = os.listdir(base_dir + '/resized')
+    whitelist = os.listdir(base_dir)
     for collection_id in whitelist:
       try:
-        os.system('python3 pixelscore_service/within_collection_score/img_to_numpy.py --collection_id={}, --base_dir={}'.format(collection_id, base_dir))
+        os.system('python3 pixelscore_service/within_collection_score/img_to_numpy.py --collection_id={} --base_dir={}'.format(collection_id, base_dir))
         print('Successfully computed pixelscores for collection {}'.format(collection_id))
       except:
         print('Unable to compute pixelscores for collection {}, trying next one'.format(collection_id))
