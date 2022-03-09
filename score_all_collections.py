@@ -48,9 +48,9 @@ def main(argv):
       base_dir = 
       
       try:
-        os.system('python3 pixelscore_service/within_collection_score/img_to_numpy.py --collection_id={}, --base_dir={}'.format(collection_id, base_dir))
-        os.system('python3 pixelscore_service/within_collection_score/train_model.py --collection_id={}, --base_dir={}'.format(collection_id, base_dir))
-        os.system('python3 pixelscore_service/within_collection_score/main.py --collection_id={}, --base_dir={}'.format(collection_id, base_dir))
+        os.system('python3 pixelscore_service/within_collection_score/img_to_numpy.py --collection_id={} --base_dir={}'.format(collection_id, base_dir))
+        os.system('python3 pixelscore_service/within_collection_score/train_model.py --collection_id={} --base_dir={}'.format(collection_id, base_dir))
+        os.system('python3 pixelscore_service/within_collection_score/main.py --collection_id={} --base_dir={}'.format(collection_id, base_dir))
         print('Successfully computed pixelscores for collection {}'.format(collection_id))
       except:
         print('Unable to compute pixelscores for collection {}, trying next one'.format(collection_id))
