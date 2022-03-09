@@ -182,11 +182,11 @@ async function main() {
   );
   let retries = parseInt(process.argv[2]);
   if (!retries) {
-    retries = 3;
+    retries = 1;
   }
   let retryAfter = parseInt(process.argv[3]);
   if (!retryAfter) {
-    retryAfter = 60;
+    retryAfter = 10;
   }
   let chainId, address;
   if (process.argv.length == 4) {
@@ -199,7 +199,7 @@ async function main() {
     // fetch completed collections from firestore
     console.log('============================== Fetching collections from firestore =================================');
     let startAfter = '';
-    const limit = 10;
+    const limit = 100;
     let done = false;
     while (!done) {
       const colls = await db
