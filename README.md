@@ -61,3 +61,9 @@ Histogram of pixelscores available at /mnt/disks/ssd/data/<COLLELCTION_ID>/pixel
 ```
 python3 pixelscore_service/within_collection_score/score_all_collections.py --collections_whtelist=whitelist.csv
 ```
+
+## Run scripts using pm2.
+```
+pm2 flush
+pm2 start pixelscore_service/within_collection_score/score_all_collections.py --name score_all_collections --interpreter=python3
+```
