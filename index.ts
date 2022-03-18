@@ -17,7 +17,7 @@ fbAdmin.initializeApp({
 const db = fbAdmin.firestore();
 const bucket = fbAdmin.storage().bucket();
 const finished = promisify(stream.finished);
-const DATA_DIR = 'data_march2022';
+const DATA_DIR = 'data';
 const IMAGES_DIR = 'resized';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE_NAME = 'metadata.csv';
