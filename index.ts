@@ -52,21 +52,25 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
   console.log('============================== Metadata written successfully =================================');
 }
 
-async function fetchOSImages(tokens: QuerySnapshot<DocumentData>, dir: string) {
+async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentData>, dir: string) {
   console.log('============================== Downloading images =================================');
   mkdirSync(dir, { recursive: true });
   tokens.forEach((token) => {
     const url = token.data().image.url as string;
     const tokenId = token.data().tokenId;
+    if (!url || !tokenId) {
+      console.error('url or tokenId is null; url:', url, 'tokenId:', tokenId, 'collection:', collection);
+      return;
+    }
     const localFile = path.join(dir, tokenId);
     // check if file already exists
     if (!fs.existsSync(localFile)) {
       if (url.indexOf('lh3') > 0) {
         const url224 = url + '=s224';
         // console.log('Downloading', url);
-        downloadImage(url224, localFile).catch((err) => console.log('error downloading', url224, err));
+        downloadImage(url224, localFile).catch((err) => console.log('error downloading', url224, collection, tokenId, err));
       } else {
-        console.error('Not OpenSea image for token', tokenId, url);
+        console.error('Not OpenSea image for token', tokenId, url, collection);
       }
     }
   });
@@ -156,7 +160,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
 
   // fetch images
   const imagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
-  await fetchOSImages(tokens, imagesDir);
+  await fetchOSImages(address, tokens, imagesDir);
 
   // validate
   await validate(numTokens, imagesDir, metadataDir, chainId, address, retries, retryAfter);
