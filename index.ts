@@ -142,6 +142,13 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     `============ Fetching data for ${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
   );
   const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
+  // check if collection is already downloaded to local file system
+  const collectionDir = path.join(__dirname, DATA_DIR, address);
+  if (fs.existsSync(collectionDir)) {
+    console.log('Collection', address, 'already downloaded. Skipping for now');
+    return;
+  }
+
   // check if collection indexing is complete
   const status = collectionDoc?.data()?.state.create.step;
   if (status !== 'complete') {
