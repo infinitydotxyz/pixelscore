@@ -22,6 +22,7 @@ const IMAGES_DIR = 'resized';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE_NAME = 'metadata.csv';
 
+let origRetries = 0;
 interface PixelScore {
   pixelScore: number;
 }
@@ -144,7 +145,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
   // check if collection is already downloaded to local file system
   const collectionDir = path.join(__dirname, DATA_DIR, address);
-  if (fs.existsSync(collectionDir)) {
+  if (retries === origRetries && fs.existsSync(collectionDir)) {
     console.log('Collection', address, 'already downloaded. Skipping for now');
     return;
   }
@@ -199,6 +200,9 @@ async function main() {
   if (!retryAfter) {
     retryAfter = 30;
   }
+
+  origRetries = retries;
+
   let chainId, address;
   if (process.argv.length == 4) {
     process.exit(1);
