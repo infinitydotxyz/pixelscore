@@ -90,7 +90,7 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
   tokens.forEach((token) => {
     const data = token.data();
     if (!data) {
-      console.error('Data is null for token', token);
+      console.error('Data is null for token');
       return;
     }
     lines += `${data.tokenId},${data.rarityScore},${data.rarityRank},${data.image?.url}\n`;
@@ -106,11 +106,11 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
   tokens.forEach((token) => {
     const data = token.data();
     if (!data) {
-      console.error('Data is null for token', token);
+      console.error('Data is null for token');
       return;
     }
     if (!data.image || !data.image.url) {
-      console.error('Image is null for token', token);
+      console.error('Image is null for token');
       return;
     }
     const url = token.data().image.url as string;
