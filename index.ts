@@ -35,6 +35,53 @@ async function saveScore(chainId: string, collection: string, tokenId: string, s
   });
 }
 
+async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number) {
+  for (const coll of colls.docs) {
+    const data = coll.data();
+    if (!data) {
+      console.error('Data is null for collection', coll);
+      continue;
+    }
+    await run(data.chainId, data.address, retries, retryAfter);
+  }
+}
+
+async function run(chainId: string, address: string, retries: number, retryAfter: number) {
+  console.log(
+    `============ Fetching data for ${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
+  );
+  const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
+  // check if collection is already downloaded to local file system
+  const collectionDir = path.join(__dirname, DATA_DIR, address);
+  // if (retries === origRetries && fs.existsSync(collectionDir)) {
+  //   console.log('Collection', address, 'already downloaded. Skipping for now');
+  //   return;
+  // }
+
+  // check if collection indexing is complete
+  const status = collectionDoc?.data()?.state.create.step;
+  // if (status !== 'complete') {
+  //   console.error('Collection indexing is not complete for', address);
+  //   return;
+  // }
+  console.log(
+    `============================== Fetching tokens from firestore for ${address} =================================`
+  );
+  let tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
+  const numTokens = tokens.size;
+
+  // fetch metadata
+  const metadataDir = path.join(__dirname, DATA_DIR, address, METADATA_DIR);
+  fetchMetadata(tokens, metadataDir);
+
+  // fetch images
+  const imagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
+  await fetchOSImages(address, tokens, imagesDir);
+
+  // validate
+  await validate(numTokens, imagesDir, metadataDir, chainId, address, retries, retryAfter);
+}
+
 function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
   console.log('============================== Writing metadata =================================');
   mkdirSync(dir, { recursive: true });
@@ -57,6 +104,15 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
   console.log('============================== Downloading images =================================');
   mkdirSync(dir, { recursive: true });
   tokens.forEach((token) => {
+    const data = token.data();
+    if (!data) {
+      console.error('Data is null for token', token);
+      return;
+    }
+    if (!data.image || !data.image.url) {
+      console.error('Image is null for token', token);
+      return;
+    }
     const url = token.data().image.url as string;
     const tokenId = token.data().tokenId;
     if (!url || !tokenId) {
@@ -69,7 +125,9 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
       if (url.indexOf('lh3') > 0) {
         const url224 = url + '=s224';
         // console.log('Downloading', url);
-        downloadImage(url224, localFile).catch((err) => console.log('error downloading', url224, collection, tokenId, err));
+        downloadImage(url224, localFile).catch((err) =>
+          console.log('error downloading', url224, collection, tokenId, err)
+        );
       } else {
         console.error('Not OpenSea image for token', tokenId, url, collection);
       }
@@ -136,53 +194,6 @@ async function sleep(duration: number): Promise<void> {
       resolve();
     }, duration);
   });
-}
-
-async function run(chainId: string, address: string, retries: number, retryAfter: number) {
-  console.log(
-    `============ Fetching data for ${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
-  );
-  const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
-  // check if collection is already downloaded to local file system
-  const collectionDir = path.join(__dirname, DATA_DIR, address);
-  // if (retries === origRetries && fs.existsSync(collectionDir)) {
-  //   console.log('Collection', address, 'already downloaded. Skipping for now');
-  //   return;
-  // }
-
-  // check if collection indexing is complete
-  const status = collectionDoc?.data()?.state.create.step;
-  // if (status !== 'complete') {
-  //   console.error('Collection indexing is not complete for', address);
-  //   return;
-  // }
-  console.log(
-    `============================== Fetching tokens from firestore for ${address} =================================`
-  );
-  let tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
-  const numTokens = tokens.size;
-
-  // fetch metadata
-  const metadataDir = path.join(__dirname, DATA_DIR, address, METADATA_DIR);
-  fetchMetadata(tokens, metadataDir);
-
-  // fetch images
-  const imagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
-  await fetchOSImages(address, tokens, imagesDir);
-
-  // validate
-  await validate(numTokens, imagesDir, metadataDir, chainId, address, retries, retryAfter);
-}
-
-async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number) {
-  for (const coll of colls.docs) {
-    const data = coll.data();
-    if (!data) {
-      console.error('Data is null for collection', coll);
-      continue;
-    }
-    await run(data.chainId, data.address, retries, retryAfter);
-  }
 }
 
 async function main() {
