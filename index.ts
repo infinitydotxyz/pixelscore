@@ -194,7 +194,7 @@ async function main() {
   );
   let retries = parseInt(process.argv[2]);
   if (!retries) {
-    retries = 2;
+    retries = 3;
   }
   let retryAfter = parseInt(process.argv[3]);
   if (!retryAfter) {
