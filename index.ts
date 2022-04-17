@@ -152,10 +152,10 @@ async function run(chainId: string, address: string, retries: number, retryAfter
 
   // check if collection indexing is complete
   const status = collectionDoc?.data()?.state.create.step;
-  if (status !== 'complete') {
-    console.error('Collection indexing is not complete for', address);
-    return;
-  }
+  // if (status !== 'complete') {
+  //   console.error('Collection indexing is not complete for', address);
+  //   return;
+  // }
   console.log(
     `============================== Fetching tokens from firestore for ${address} =================================`
   );
