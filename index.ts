@@ -153,11 +153,12 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
     url,
     responseType: 'stream'
   })
-    .then((response) => {
-      response.data.pipe(createWriteStream(outputLocationPath)).on('finish', () => {
-        return;
-      });
-      // return finished(createWriteStream(outputLocationPath));
+    .then(async (response) => {
+      // response.data.pipe(createWriteStream(outputLocationPath)).on('finish', () => {
+      //   return;
+      // });
+      response.data.pipe(createWriteStream(outputLocationPath));
+      return await finished(createWriteStream(outputLocationPath));
     })
     .catch((err) => {
       throw err;
