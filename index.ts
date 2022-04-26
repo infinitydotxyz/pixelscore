@@ -129,7 +129,7 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
           console.log('error downloading', url224, collection, tokenId, err)
         );
       } else {
-        // console.error('Not OpenSea image for token', tokenId, url, collection);
+        console.log('Not OpenSea image for token', tokenId, url, collection, 'mogrifying');
         downloadImage(url, resizedImageLocalFile)
           .then(() => {
             // mogrify
