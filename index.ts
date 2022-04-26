@@ -129,11 +129,12 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
           console.log('error downloading', url224, collection, tokenId, err)
         );
       } else {
-        console.log('Not OpenSea image for token', tokenId, url, collection, 'mogrifying');
+        console.log('Not OpenSea image for token', tokenId, url, collection);
         downloadImage(url, resizedImageLocalFile)
           .then(() => {
             // mogrify
-            const cmd = `mogrify -verbose -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
+            console.log('Resizing image', url, collection, tokenId);
+            const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
             exec(cmd, (err, stdout, stderr) => {
               if (err) {
                 console.error('Error mogrifying', cmd, err);
