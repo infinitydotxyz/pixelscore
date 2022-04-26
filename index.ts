@@ -6,7 +6,7 @@ import { createWriteStream, mkdirSync } from 'fs';
 import path from 'path';
 import fs from 'fs';
 import { QuerySnapshot, DocumentData, QueryDocumentSnapshot } from '@google-cloud/firestore';
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
 
 import serviceAccount from './creds/nftc-infinity-firebase-creds.json';
 fbAdmin.initializeApp({
@@ -50,16 +50,16 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   console.log(
     `============ Fetching data for ${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
   );
-  const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
+  // const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
   // check if collection is already downloaded to local file system
-  const collectionDir = path.join(__dirname, DATA_DIR, address);
+  // const collectionDir = path.join(__dirname, DATA_DIR, address);
   // if (retries === origRetries && fs.existsSync(collectionDir)) {
   //   console.log('Collection', address, 'already downloaded. Skipping for now');
   //   return;
   // }
 
   // check if collection indexing is complete
-  const status = collectionDoc?.data()?.state.create.step;
+  // const status = collectionDoc?.data()?.state.create.step;
   // if (status !== 'complete') {
   //   console.error('Collection indexing is not complete for', address);
   //   return;
@@ -75,11 +75,11 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   fetchMetadata(tokens, metadataDir);
 
   // fetch images
-  const imagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
-  await fetchOSImages(address, tokens, imagesDir);
+  const resizedImagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
+  await fetchOSImages(address, tokens, resizedImagesDir);
 
   // validate
-  await validate(numTokens, imagesDir, metadataDir, chainId, address, retries, retryAfter);
+  await validate(numTokens, resizedImagesDir, metadataDir, chainId, address, retries, retryAfter);
 }
 
 function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
@@ -100,10 +100,10 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
   console.log('============================== Metadata written successfully =================================');
 }
 
-async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentData>, dir: string) {
+async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentData>, resizedImagesDir: string) {
   console.log('============================== Downloading images =================================');
-  mkdirSync(dir, { recursive: true });
-  tokens.forEach((token) => {
+  mkdirSync(resizedImagesDir, { recursive: true });
+  for (const token of tokens.docs) {
     const data = token.data();
     if (!data) {
       console.error('Data is null for token');
@@ -119,20 +119,31 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
       console.error('url or tokenId is null; url:', url, 'tokenId:', tokenId, 'collection:', collection);
       return;
     }
-    const localFile = path.join(dir, tokenId);
+    const resizedImageLocalFile = path.join(resizedImagesDir, tokenId);
     // check if file already exists
-    if (!fs.existsSync(localFile)) {
+    if (!fs.existsSync(resizedImageLocalFile)) {
       if (url.indexOf('lh3') > 0) {
         const url224 = url + '=s224';
         // console.log('Downloading', url);
-        downloadImage(url224, localFile).catch((err) =>
+        downloadImage(url224, resizedImageLocalFile).catch((err) =>
           console.log('error downloading', url224, collection, tokenId, err)
         );
       } else {
-        console.error('Not OpenSea image for token', tokenId, url, collection);
+        // console.error('Not OpenSea image for token', tokenId, url, collection);
+        downloadImage(url, resizedImageLocalFile)
+          .then(() => {
+            // mogrify
+            const cmd = `mogrify -verbose -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
+            exec(cmd, (err, stdout, stderr) => {
+              if (err) {
+                console.error('Error mogrifying', cmd, err);
+              }
+            });
+          })
+          .catch((err) => console.log('error downloading', url, collection, tokenId, err));
       }
     }
-  });
+  }
 }
 
 async function downloadImage(url: string, outputLocationPath: string): Promise<any> {
@@ -146,7 +157,7 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
       return finished(createWriteStream(outputLocationPath));
     })
     .catch((err) => {
-      // do nothing
+      throw err;
     });
 }
 
