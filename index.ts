@@ -126,7 +126,7 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
         const url224 = url + '=s224';
         // console.log('Downloading', url);
         downloadImage(url224, resizedImageLocalFile).catch((err) =>
-          console.log('error downloading', url224, collection, tokenId, err)
+          console.error('error downloading', url224, collection, tokenId, err)
         );
       } else {
         console.log('Not OpenSea image for token', tokenId, url, collection);
@@ -153,9 +153,12 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
     url,
     responseType: 'stream'
   })
-    .then(async (response) => {
-      response.data.pipe(createWriteStream(outputLocationPath));
-      return finished(createWriteStream(outputLocationPath));
+    .then((response) => {
+      response.data.pipe(createWriteStream(outputLocationPath)).on('finish', () => {
+        console.log('Image downloaded to', outputLocationPath);
+        return;
+      });
+      // return finished(createWriteStream(outputLocationPath));
     })
     .catch((err) => {
       throw err;
