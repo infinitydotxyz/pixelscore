@@ -133,7 +133,7 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
         downloadImage(url, resizedImageLocalFile)
           .then(() => {
             // mogrify
-            console.log('Resizing image', url, collection, tokenId);
+            console.log('Mogrifying image', url, collection, tokenId);
             const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
             exec(cmd, (err, stdout, stderr) => {
               if (err) {
@@ -155,7 +155,6 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
   })
     .then((response) => {
       response.data.pipe(createWriteStream(outputLocationPath)).on('finish', () => {
-        console.log('Image downloaded to', outputLocationPath);
         return;
       });
       // return finished(createWriteStream(outputLocationPath));
