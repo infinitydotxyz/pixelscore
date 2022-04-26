@@ -1,6 +1,7 @@
 import fbAdmin from 'firebase-admin';
 import * as stream from 'stream';
-import { promisify } from 'util';
+// import { promisify } from 'util';
+import { finished } from 'stream/promises';
 import axios from 'axios';
 import { createWriteStream, mkdirSync } from 'fs';
 import path from 'path';
@@ -16,7 +17,7 @@ fbAdmin.initializeApp({
 
 const db = fbAdmin.firestore();
 const bucket = fbAdmin.storage().bucket();
-const finished = promisify(stream.finished);
+// const finished = promisify(stream.finished);
 const DATA_DIR = 'data';
 const IMAGES_DIR = 'resized';
 const METADATA_DIR = 'metadata';
@@ -157,8 +158,9 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
       // response.data.pipe(createWriteStream(outputLocationPath)).on('finish', () => {
       //   return;
       // });
-      response.data.pipe(createWriteStream(outputLocationPath));
-      return await finished(createWriteStream(outputLocationPath));
+      // response.data.pipe(createWriteStream(outputLocationPath));
+      // return await finished(createWriteStream(outputLocationPath));
+      return await finished(response.data.pipe(createWriteStream(outputLocationPath)));
     })
     .catch((err) => {
       throw err;
