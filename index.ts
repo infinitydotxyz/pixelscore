@@ -129,11 +129,11 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
           console.error('error downloading', url224, collection, tokenId, err)
         );
       } else {
-        console.log('Not OpenSea image for token', tokenId, url, collection);
+        // console.log('Not OpenSea image for token', tokenId, url, collection);
         downloadImage(url, resizedImageLocalFile)
           .then(() => {
             // mogrify
-            console.log('Mogrifying image', url, collection, tokenId);
+            // console.log('Mogrifying image', url, collection, tokenId);
             const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
             exec(cmd, (err, stdout, stderr) => {
               if (err) {
@@ -141,7 +141,7 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
               }
             });
           })
-          .catch((err) => console.log('error downloading', url, collection, tokenId, err));
+          .catch((err) => console.error('error downloading', url, collection, tokenId, err));
       }
     }
   }
