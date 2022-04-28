@@ -31,7 +31,7 @@ const mnemonic = new MnemonicClient();
 const opensea = new OpenSeaClient();
 
 async function fetchOSImage(url: string, collection: string, tokenId: string, resizedImagesDir: string) {
-  console.log(`================== Downloading image to ${resizedImagesDir} ====================`);
+  // console.log(`================== Downloading image to ${resizedImagesDir} ====================`);
   mkdirSync(resizedImagesDir, { recursive: true });
   if (!url || !tokenId) {
     console.error('url or tokenId is null; url:', url, 'tokenId:', tokenId, 'collection:', collection);
