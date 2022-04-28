@@ -53,7 +53,7 @@ export default class MnemonicClient {
         searchParams: {
           offset,
           limit,
-          sortDirection: 'SORT_DIRECTION_DESC',
+          sortDirection: 'SORT_DIRECTION_ASC',
           contractTypes: 'TOKEN_TYPE_ERC1155'
         },
         responseType: 'json'

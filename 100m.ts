@@ -31,7 +31,7 @@ const mnemonic = new MnemonicClient();
 const opensea = new OpenSeaClient();
 
 async function fetchOSImage(url: string, collection: string, tokenId: string, resizedImagesDir: string) {
-  console.log('============================== Downloading image =================================');
+  console.log(`================== Downloading image to ${resizedImagesDir} ====================`);
   mkdirSync(resizedImagesDir, { recursive: true });
   if (!url || !tokenId) {
     console.error('url or tokenId is null; url:', url, 'tokenId:', tokenId, 'collection:', collection);
@@ -88,11 +88,16 @@ async function buildCollection(address: string, tokensOffset = 0) {
     console.log('Collection', address, 'already downloaded. Skipping for now');
     return;
   }
-  const limit = 500;
+  const tokensOfContractLimit = 50;
   const openseaLimit = 50;
   const openseaTokenIdsLimit = 20;
-  const tokenResponse = await mnemonic.getNFTsOfContract(address, limit, tokensOffset);
+  const tokenResponse = await mnemonic.getNFTsOfContract(address, tokensOfContractLimit, tokensOffset);
   const tokens = tokenResponse.tokens;
+  if (tokens.length == 0) {
+    console.log('No tokens found for', address);
+    return;
+  }
+  console.log(`Found ${tokens.length} tokens for ${address}`);
   const resizedImagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
 
   // fetch tokens that don't have images
@@ -107,6 +112,7 @@ async function buildCollection(address: string, tokensOffset = 0) {
   const numImagelessTokens = imageLessTokens.length;
   const numTokens = tokens.length;
   const percentFailed = Math.floor((numImagelessTokens / numTokens) * 100);
+  // console.log(`percent tokens failed to download images (${percentFailed}%)`);
   if (percentFailed < 40) {
     const numIters = Math.ceil(numImagelessTokens / openseaTokenIdsLimit);
     for (let i = 0; i < numIters; i++) {
@@ -116,6 +122,7 @@ async function buildCollection(address: string, tokensOffset = 0) {
         tokenIdsConcat += `token_ids=${token.tokenId}&`;
       }
       const data = await opensea.getTokenIdsOfContract(address, tokenIdsConcat);
+      // console.log(`opensea getTokenIdsOfContract for ${address}`, data);
       for (const datum of data.assets) {
         const imageUrl = datum.image_url;
         await fetchOSImage(imageUrl, address, datum.token_id, resizedImagesDir);
@@ -126,6 +133,7 @@ async function buildCollection(address: string, tokensOffset = 0) {
     let cursor = '';
     for (let i = 0; i < numIters; i++) {
       const data = await opensea.getNFTsOfContract(address, openseaLimit, cursor);
+      // console.log(`opensea getNFTsOfContract for ${address}`, data);
       // update cursor
       cursor = data.next;
       for (const datum of data.assets) {
@@ -136,16 +144,14 @@ async function buildCollection(address: string, tokensOffset = 0) {
   }
 
   // recurse
-  if (tokens.length === limit) {
+  if (tokens.length === tokensOfContractLimit) {
     console.log('Building collection', address, 'recursing with offset', tokensOffset);
-    await buildCollection(address, tokensOffset + limit);
+    await buildCollection(address, tokensOffset + tokensOfContractLimit);
   }
 }
 
 async function main() {
-  console.log(
-    'Usage for all collections: node 100m.js'
-  );
+  console.log('Usage for all collections: node 100m.js');
   console.log(
     'Usage for individual collection: node 100m.js <number of retries (maybe 3?)> <retry after seconds (maybe 60?)> <chainId> <collectionAddress>'
   );
@@ -169,13 +175,13 @@ async function main() {
     await buildCollection(address, 0);
   } else {
     console.log('============================== Fetching collections from mnemonic =================================');
-    const limit = 1;
+    const limit = 50;
     let done = false;
     let offset = 0;
     while (!done) {
       const colls = await mnemonic.getERC721Collections(offset, limit);
       // break condition
-      if (colls.length <= limit) {
+      if (colls.length < limit) {
         done = true;
       }
       for (const coll of colls) {
