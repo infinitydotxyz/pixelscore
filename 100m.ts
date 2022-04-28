@@ -37,8 +37,12 @@ async function fetchOSImage(url: string, collection: string, tokenId: string, re
     console.error('url or tokenId is null; url:', url, 'tokenId:', tokenId, 'collection:', collection);
     return;
   }
+  // write url to file
+  const urlFile = path.join(resizedImagesDir, tokenId + '.url');
+  fs.writeFileSync(urlFile, `${tokenId},${url}`);
+
+  // check if image file already exists
   const resizedImageLocalFile = path.join(resizedImagesDir, tokenId);
-  // check if file already exists
   if (!fs.existsSync(resizedImageLocalFile)) {
     if (url.indexOf('lh3') > 0) {
       const url224 = url + '=s224';
@@ -55,7 +59,7 @@ async function fetchOSImage(url: string, collection: string, tokenId: string, re
           const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
           exec(cmd, (err, stdout, stderr) => {
             if (err) {
-              console.error('Error mogrifying', cmd, err);
+              console.error('Error mogrifying', resizedImageLocalFile, err);
             }
           });
         })
