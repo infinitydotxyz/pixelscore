@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 export const OPENSEA_API_KEYS = (() => {
   const apiKeys = getMultipleEnvVariables('OPENSEA_API_KEY');
   return apiKeys;
