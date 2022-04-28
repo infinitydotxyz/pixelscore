@@ -175,7 +175,7 @@ async function main() {
     while (!done) {
       const colls = await mnemonic.getERC721Collections(offset, limit);
       // break condition
-      if (colls.length < limit) {
+      if (colls.length <= limit) {
         done = true;
       }
       for (const coll of colls) {
