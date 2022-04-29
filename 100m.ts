@@ -158,8 +158,12 @@ async function buildCollection(address: string, tokensOffset = 0) {
     await buildCollectionFromOS(address, imageLessTokens, resizedImagesDir);
   } catch (err) {
     console.error('Error building collection from opensea', address, err);
-    // build from mnemonic
-    await buildCollectionFromMnemonic(address, imageLessTokens, resizedImagesDir);
+    try {
+      // build from mnemonic
+      await buildCollectionFromMnemonic(address, imageLessTokens, resizedImagesDir);
+    } catch (err) {
+      console.error('Error building collection from mnemonic', address, err);
+    }
   }
 
   // recurse
@@ -170,55 +174,63 @@ async function buildCollection(address: string, tokensOffset = 0) {
 }
 
 async function buildCollectionFromMnemonic(address: string, tokens: Token[], resizedImagesDir: string) {
-  console.log(
-    `============================== Building collection ${address} from Mnemonic =================================`
-  );
-  for (const token of tokens) {
-    const tokenId = token.tokenId;
-    const metadata = token.tokenMetadata;
-    const imageUrl = metadata.image.uri;
-    await fetchOriginalImage(imageUrl, address, tokenId, resizedImagesDir);
+  try {
+    console.log(
+      `============================== Building collection ${address} from Mnemonic =================================`
+    );
+    for (const token of tokens) {
+      const tokenId = token.tokenId;
+      const metadata = token.tokenMetadata;
+      const imageUrl = metadata.image.uri;
+      await fetchOriginalImage(imageUrl, address, tokenId, resizedImagesDir);
+    }
+  } catch (err) {
+    throw err;
   }
 }
 
 async function buildCollectionFromOS(address: string, tokens: Token[], resizedImagesDir: string) {
-  console.log(
-    `============================== Building collection ${address} from OS =================================`
-  );
-  const openseaLimit = 50;
-  const openseaTokenIdsLimit = 20;
-  const numImagelessTokens = tokens.length;
-  const numTokens = tokens.length;
-  const percentFailed = Math.floor((numImagelessTokens / numTokens) * 100);
-  // console.log(`percent tokens failed to download images (${percentFailed}%)`);
-  if (percentFailed < 40) {
-    const numIters = Math.ceil(numImagelessTokens / openseaTokenIdsLimit);
-    for (let i = 0; i < numIters; i++) {
-      const tokenSlice = tokens.slice(i * openseaTokenIdsLimit, (i + 1) * openseaTokenIdsLimit);
-      let tokenIdsConcat = '';
-      for (const token of tokenSlice) {
-        tokenIdsConcat += `token_ids=${token.tokenId}&`;
+  try {
+    console.log(
+      `============================== Building collection ${address} from OS =================================`
+    );
+    const openseaLimit = 50;
+    const openseaTokenIdsLimit = 20;
+    const numImagelessTokens = tokens.length;
+    const numTokens = tokens.length;
+    const percentFailed = Math.floor((numImagelessTokens / numTokens) * 100);
+    // console.log(`percent tokens failed to download images (${percentFailed}%)`);
+    if (percentFailed < 40) {
+      const numIters = Math.ceil(numImagelessTokens / openseaTokenIdsLimit);
+      for (let i = 0; i < numIters; i++) {
+        const tokenSlice = tokens.slice(i * openseaTokenIdsLimit, (i + 1) * openseaTokenIdsLimit);
+        let tokenIdsConcat = '';
+        for (const token of tokenSlice) {
+          tokenIdsConcat += `token_ids=${token.tokenId}&`;
+        }
+        const data = await opensea.getTokenIdsOfContract(address, tokenIdsConcat);
+        // console.log(`opensea getTokenIdsOfContract for ${address}`, data);
+        for (const datum of data.assets) {
+          const imageUrl = datum.image_url;
+          await fetchOSImage(imageUrl, address, datum.token_id, resizedImagesDir);
+        }
       }
-      const data = await opensea.getTokenIdsOfContract(address, tokenIdsConcat);
-      // console.log(`opensea getTokenIdsOfContract for ${address}`, data);
-      for (const datum of data.assets) {
-        const imageUrl = datum.image_url;
-        await fetchOSImage(imageUrl, address, datum.token_id, resizedImagesDir);
+    } else {
+      const numIters = Math.ceil(numTokens / openseaLimit);
+      let cursor = '';
+      for (let i = 0; i < numIters; i++) {
+        const data = await opensea.getNFTsOfContract(address, openseaLimit, cursor);
+        // console.log(`opensea getNFTsOfContract for ${address}`, data);
+        // update cursor
+        cursor = data.next;
+        for (const datum of data.assets) {
+          const imageUrl = datum.image_url;
+          await fetchOSImage(imageUrl, address, datum.token_id, resizedImagesDir);
+        }
       }
     }
-  } else {
-    const numIters = Math.ceil(numTokens / openseaLimit);
-    let cursor = '';
-    for (let i = 0; i < numIters; i++) {
-      const data = await opensea.getNFTsOfContract(address, openseaLimit, cursor);
-      // console.log(`opensea getNFTsOfContract for ${address}`, data);
-      // update cursor
-      cursor = data.next;
-      for (const datum of data.assets) {
-        const imageUrl = datum.image_url;
-        await fetchOSImage(imageUrl, address, datum.token_id, resizedImagesDir);
-      }
-    }
+  } catch (err) {
+    throw err;
   }
 }
 
@@ -246,16 +258,21 @@ async function main() {
     address = process.argv[5].trim().toLowerCase();
     await buildCollection(address, 0);
   } else {
-    const limit = 50;
-    let done = false;
+    let limit = 50;
     let offset = 0;
+    const offsetFile = path.join(__dirname, 'offset.txt');
+    const offsetAndLimit = fs.readFileSync(offsetFile, 'utf8').split(',');
+    if (offsetAndLimit.length == 2) {
+      offset = parseInt(offsetAndLimit[0]);
+      limit = parseInt(offsetAndLimit[1]);
+    }
+    let done = false;
     while (!done) {
       console.log(
         `============================== Fetching collections from mnemonic, offset ${offset}, limit ${limit} =================================`
       );
       // write url to file
-      const offsetFile = path.join(__dirname, 'offset.txt');
-      fs.writeFileSync(offsetFile, `${offset}, ${limit}`);
+      fs.writeFileSync(offsetFile, `${offset},${limit}`);
       const colls = await mnemonic.getERC721Collections(offset, limit);
       // break condition
       if (colls.length < limit) {
