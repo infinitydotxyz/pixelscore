@@ -1,23 +1,13 @@
-import fbAdmin from 'firebase-admin';
 import * as stream from 'stream';
 import { promisify } from 'util';
 import axios from 'axios';
 import { createWriteStream, mkdirSync } from 'fs';
 import path from 'path';
 import fs from 'fs';
-import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
-import { execSync, exec } from 'child_process';
-import serviceAccount from './creds/nftc-infinity-firebase-creds.json';
+import { exec } from 'child_process';
 import MnemonicClient from './mnemonic';
 import OpenSeaClient from './opensea';
 
-fbAdmin.initializeApp({
-  credential: fbAdmin.credential.cert(serviceAccount as fbAdmin.ServiceAccount),
-  storageBucket: 'infinity-static'
-});
-
-const db = fbAdmin.firestore();
-const bucket = fbAdmin.storage().bucket();
 const finished = promisify(stream.finished);
 const DATA_DIR = 'data';
 const MNEMONIC_DATA_DIR = 'mnemonic_data';
@@ -178,11 +168,16 @@ async function main() {
     address = process.argv[5].trim().toLowerCase();
     await buildCollection(address, 0);
   } else {
-    console.log('============================== Fetching collections from mnemonic =================================');
     const limit = 50;
     let done = false;
     let offset = 0;
     while (!done) {
+      console.log(
+        `============================== Fetching collections from mnemonic, offset ${offset}, limit ${limit} =================================`
+      );
+      // write url to file
+      const offsetFile = path.join(__dirname, 'offset.txt');
+      fs.writeFileSync(offsetFile, `${offset}, ${limit}`);
       const colls = await mnemonic.getERC721Collections(offset, limit);
       // break condition
       if (colls.length < limit) {
@@ -191,6 +186,7 @@ async function main() {
       for (const coll of colls) {
         await buildCollection(coll.address, 0);
       }
+      offset += limit;
     }
   }
 }
