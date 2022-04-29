@@ -149,12 +149,14 @@ export default class MnemonicClient {
 }
 
 interface TokensByContractResponse {
-  tokens: Array<{
-    contractAddress: string;
-    tokenId: string;
-    type: string;
-    tokenMetadata: TokenMetadata;
-  }>;
+  tokens: Token[];
+}
+
+export interface Token {
+  contractAddress: string;
+  tokenId: string;
+  type: string;
+  tokenMetadata: TokenMetadata;
 }
 
 interface TokenMetadata {

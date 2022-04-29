@@ -99,7 +99,7 @@ export default class OpenSeaClient {
             throw new Error('Not found');
 
           case 429:
-            await sleep(2000);
+            await sleep(5000);
             throw new Error('Rate limited');
 
           case 500:

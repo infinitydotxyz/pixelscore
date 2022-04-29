@@ -1,5 +1,28 @@
 import 'dotenv/config';
 
+const getInfuraIPFSAuthKeys = (): string[] => {
+  const apiKeys = [];
+
+  let i = 0;
+  for (;;) {
+    try {
+      const projectId = getEnvironmentVariable(`INFURA_IPFS_PROJECT_ID${i}`);
+      const projectSecret = getEnvironmentVariable(`INFURA_IPFS_PROJECT_SECRET${i}`);
+      const apiKey = Buffer.from(`${projectId}:${projectSecret}`).toString('base64');
+      const header = `Basic ${apiKey}`;
+      apiKeys.push(header);
+      i += 1;
+    } catch (err) {
+      break;
+    }
+  }
+  return apiKeys;
+};
+
+export const METADATA_CONCURRENCY = 50;
+
+export const INFURA_API_KEYS = getInfuraIPFSAuthKeys();
+
 export const OPENSEA_API_KEYS = (() => {
   const apiKeys = getMultipleEnvVariables('OPENSEA_API_KEY');
   return apiKeys;

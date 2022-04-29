@@ -5,8 +5,9 @@ import { createWriteStream, mkdirSync } from 'fs';
 import path from 'path';
 import fs from 'fs';
 import { exec } from 'child_process';
-import MnemonicClient from './mnemonic';
+import MnemonicClient, { Token } from './mnemonic';
 import OpenSeaClient from './opensea';
+import MetadataClient from './Metadata';
 
 const finished = promisify(stream.finished);
 const DATA_DIR = 'data';
@@ -19,9 +20,10 @@ let origRetries = 0;
 
 const mnemonic = new MnemonicClient();
 const opensea = new OpenSeaClient();
+const metadataClient = new MetadataClient();
 
 async function fetchOSImage(url: string, collection: string, tokenId: string, resizedImagesDir: string) {
-  // console.log(`================== Downloading image to ${resizedImagesDir} ====================`);
+  // console.log(`================== Downloading OS image to ${resizedImagesDir} ====================`);
   mkdirSync(resizedImagesDir, { recursive: true });
   if (!url || !tokenId) {
     console.error('url or tokenId is null; url:', url, 'tokenId:', tokenId, 'collection:', collection);
@@ -42,6 +44,58 @@ async function fetchOSImage(url: string, collection: string, tokenId: string, re
       );
     } else {
       // console.log('Not OpenSea image for token', tokenId, url, collection);
+      downloadImage(url, resizedImageLocalFile)
+        .then(() => {
+          // mogrify
+          // console.log('Mogrifying image', url, collection, tokenId);
+          const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
+          exec(cmd, (err, stdout, stderr) => {
+            if (err) {
+              console.error('Error mogrifying', resizedImageLocalFile, err);
+            }
+          });
+        })
+        .catch((err) => console.error('error downloading', url, collection, tokenId, err));
+    }
+  }
+}
+
+async function fetchOriginalImage(url: string, collection: string, tokenId: string, resizedImagesDir: string) {
+  // console.log(`================== Downloading original image to ${resizedImagesDir} ====================`);
+  mkdirSync(resizedImagesDir, { recursive: true });
+  if (!url || !tokenId) {
+    console.error('url or tokenId is null; url:', url, 'tokenId:', tokenId, 'collection:', collection);
+    return;
+  }
+  // write url to file
+  const urlFile = path.join(resizedImagesDir, tokenId + '.url');
+  fs.writeFileSync(urlFile, `${tokenId},${url}`);
+
+  // check if image file already exists
+  const resizedImageLocalFile = path.join(resizedImagesDir, tokenId);
+  if (!fs.existsSync(resizedImageLocalFile)) {
+    if (url.startsWith('ipfs')) {
+      metadataClient
+        .get(url, 0)
+        .then((response) => {
+          const writer = createWriteStream(resizedImageLocalFile);
+          writer.write(response.body, (error) => {
+            if (error) {
+              console.error('Error writing image', resizedImageLocalFile, error);
+            } else {
+              // mogrify
+              // console.log('Mogrifying image', url, collection, tokenId);
+              const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
+              exec(cmd, (err, stdout, stderr) => {
+                if (err) {
+                  console.error('Error mogrifying', resizedImageLocalFile, err);
+                }
+              });
+            }
+          });
+        })
+        .catch((err) => console.error('error downloading', url, collection, tokenId, err));
+    } else {
       downloadImage(url, resizedImageLocalFile)
         .then(() => {
           // mogrify
@@ -83,8 +137,6 @@ async function buildCollection(address: string, tokensOffset = 0) {
     return;
   }
   const tokensOfContractLimit = 50;
-  const openseaLimit = 50;
-  const openseaTokenIdsLimit = 20;
   const tokenResponse = await mnemonic.getNFTsOfContract(address, tokensOfContractLimit, tokensOffset);
   const tokens = tokenResponse.tokens;
   if (tokens.length == 0) {
@@ -93,17 +145,49 @@ async function buildCollection(address: string, tokensOffset = 0) {
   }
   console.log(`Found ${tokens.length} tokens for ${address}`);
   const resizedImagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
-
   // fetch tokens that don't have images
-  const imageLessTokens = [];
+  const imageLessTokens: Token[] = [];
   for (const token of tokens) {
     const resizedImageLocalFile = path.join(resizedImagesDir, token.tokenId);
     if (!fs.existsSync(resizedImageLocalFile)) {
       imageLessTokens.push(token);
     }
   }
+  try {
+    // build from os
+    await buildCollectionFromOS(address, imageLessTokens, resizedImagesDir);
+  } catch (err) {
+    console.error('Error building collection from opensea', address, err);
+    // build from mnemonic
+    await buildCollectionFromMnemonic(address, imageLessTokens, resizedImagesDir);
+  }
 
-  const numImagelessTokens = imageLessTokens.length;
+  // recurse
+  if (tokens.length === tokensOfContractLimit) {
+    console.log('Building collection', address, 'recursing with offset', tokensOffset);
+    await buildCollection(address, tokensOffset + tokensOfContractLimit);
+  }
+}
+
+async function buildCollectionFromMnemonic(address: string, tokens: Token[], resizedImagesDir: string) {
+  console.log(
+    `============================== Building collection ${address} from Mnemonic =================================`
+  );
+  for (const token of tokens) {
+    const tokenId = token.tokenId;
+    const metadata = token.tokenMetadata;
+    const imageUrl = metadata.image.uri;
+    await fetchOriginalImage(imageUrl, address, tokenId, resizedImagesDir);
+  }
+}
+
+async function buildCollectionFromOS(address: string, tokens: Token[], resizedImagesDir: string) {
+  console.log(
+    `============================== Building collection ${address} from OS =================================`
+  );
+  const openseaLimit = 50;
+  const openseaTokenIdsLimit = 20;
+  const numImagelessTokens = tokens.length;
   const numTokens = tokens.length;
   const percentFailed = Math.floor((numImagelessTokens / numTokens) * 100);
   // console.log(`percent tokens failed to download images (${percentFailed}%)`);
@@ -135,12 +219,6 @@ async function buildCollection(address: string, tokensOffset = 0) {
         await fetchOSImage(imageUrl, address, datum.token_id, resizedImagesDir);
       }
     }
-  }
-
-  // recurse
-  if (tokens.length === tokensOfContractLimit) {
-    console.log('Building collection', address, 'recursing with offset', tokensOffset);
-    await buildCollection(address, tokensOffset + tokensOfContractLimit);
   }
 }
 
