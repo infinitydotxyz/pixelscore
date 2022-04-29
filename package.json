@@ -19,7 +19,7 @@
     "got": "^11.8.3",
     "it-reader": "^3.0.0",
     "nodemon": "^2.0.15",
-    "p-queue": "^7.2.0",
+    "p-queue": "^6.6.2",
     "rimraf": "^3.0.2",
     "ts-node": "^10.5.0",
     "typescript": "^4.5.5"
