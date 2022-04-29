@@ -32,69 +32,94 @@ export default class MnemonicClient {
   }
 
   async getERC721Collections(offset = 0, limit = 1): Promise<Contract[]> {
-    const res: Response<ContractsResponse> = await this.errorHandler(() => {
-      return this.mnemonicClient.get(`contracts/v1beta1/all`, {
-        searchParams: {
-          offset,
-          limit,
-          sortDirection: 'SORT_DIRECTION_DESC',
-          contractTypes: 'TOKEN_TYPE_ERC721'
-        },
-        responseType: 'json'
+    try {
+      const res: Response<ContractsResponse> = await this.errorHandler(() => {
+        return this.mnemonicClient.get(`contracts/v1beta1/all`, {
+          searchParams: {
+            offset,
+            limit,
+            sortDirection: 'SORT_DIRECTION_DESC',
+            contractTypes: 'TOKEN_TYPE_ERC721'
+          },
+          responseType: 'json'
+        });
       });
-    });
-    const collections = res?.body?.contracts ?? [];
-    return collections;
+      const collections = res?.body?.contracts ?? [];
+      return collections;
+    } catch (err) {
+      console.error('Error getting ERC721 collections at offset', offset, 'and limit', limit, err);
+      throw err;
+    }
   }
 
   async getERC1155Collections(offset = 0, limit = 1): Promise<Contract[]> {
-    const res: Response<ContractsResponse> = await this.errorHandler(() => {
-      return this.mnemonicClient.get(`contracts/v1beta1/all`, {
-        searchParams: {
-          offset,
-          limit,
-          sortDirection: 'SORT_DIRECTION_ASC',
-          contractTypes: 'TOKEN_TYPE_ERC1155'
-        },
-        responseType: 'json'
+    try {
+      const res: Response<ContractsResponse> = await this.errorHandler(() => {
+        return this.mnemonicClient.get(`contracts/v1beta1/all`, {
+          searchParams: {
+            offset,
+            limit,
+            sortDirection: 'SORT_DIRECTION_ASC',
+            contractTypes: 'TOKEN_TYPE_ERC1155'
+          },
+          responseType: 'json'
+        });
       });
-    });
-    const collections = res?.body?.contracts ?? [];
-    return collections;
+      const collections = res?.body?.contracts ?? [];
+      return collections;
+    } catch (err) {
+      console.error('Error getting ERC1155 collections at offset', offset, 'and limit', limit, err);
+      throw err;
+    }
   }
 
   async getCollection(address: string): Promise<Contract> {
-    const res: Response<{ contract: Contract }> = await this.errorHandler(() => {
-      return this.mnemonicClient.get(`contracts/v1beta1/by_address/${address}`, {
-        responseType: 'json'
+    try {
+      const res: Response<{ contract: Contract }> = await this.errorHandler(() => {
+        return this.mnemonicClient.get(`contracts/v1beta1/by_address/${address}`, {
+          responseType: 'json'
+        });
       });
-    });
-    const contract = res?.body?.contract ?? {};
-    return contract;
+      const contract = res?.body?.contract ?? {};
+      return contract;
+    } catch (err) {
+      console.error('Error getting collection', address, err);
+      throw err;
+    }
   }
 
   async getNFTsOfContract(address: string, limit: number, offset: number): Promise<TokensByContractResponse> {
-    const res: Response<TokensByContractResponse> = await this.errorHandler(() => {
-      const url = `tokens/v1beta1/by_contract/${address}`;
-      return this.mnemonicClient.get(url, {
-        searchParams: {
-          offset,
-          limit,
-          sortDirection: 'SORT_DIRECTION_DESC'
-        },
-        responseType: 'json'
+    try {
+      const res: Response<TokensByContractResponse> = await this.errorHandler(() => {
+        const url = `tokens/v1beta1/by_contract/${address}`;
+        return this.mnemonicClient.get(url, {
+          searchParams: {
+            offset,
+            limit,
+            sortDirection: 'SORT_DIRECTION_DESC'
+          },
+          responseType: 'json'
+        });
       });
-    });
-    return res.body;
+      return res.body;
+    } catch (err) {
+      console.error('Error getting NFTs of contract', address, err);
+      throw err;
+    }
   }
 
   async getNFTMetadata(address: string, tokenId: string): Promise<TokenMetadata> {
-    const res: Response<TokenMetadata> = await this.errorHandler(() => {
-      return this.mnemonicClient.get(`tokens/v1beta1/token/${address}/${tokenId}/metadata`, {
-        responseType: 'json'
+    try {
+      const res: Response<TokenMetadata> = await this.errorHandler(() => {
+        return this.mnemonicClient.get(`tokens/v1beta1/token/${address}/${tokenId}/metadata`, {
+          responseType: 'json'
+        });
       });
-    });
-    return res.body;
+      return res.body;
+    } catch (err) {
+      console.error('Error getting NFT metadata', address, tokenId, err);
+      throw err;
+    }
   }
 
   private async errorHandler<T>(request: () => Promise<Response<T>>, maxAttempts = 3): Promise<Response<T>> {

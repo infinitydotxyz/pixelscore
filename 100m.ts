@@ -129,47 +129,51 @@ async function downloadImage(url: string, outputLocationPath: string): Promise<a
 }
 
 async function buildCollection(address: string, tokensOffset = 0) {
-  console.log(`============================== Building collection ${address} =================================`);
-  // check if collection is already downloaded to local file system
-  const collectionDir = path.join(__dirname, DATA_DIR, address);
-  if (fs.existsSync(collectionDir)) {
-    console.log('Collection', address, 'already downloaded. Skipping for now');
-    return;
-  }
-  const tokensOfContractLimit = 50;
-  const tokenResponse = await mnemonic.getNFTsOfContract(address, tokensOfContractLimit, tokensOffset);
-  const tokens = tokenResponse.tokens;
-  if (tokens.length == 0) {
-    console.log('No tokens found for', address);
-    return;
-  }
-  console.log(`Found ${tokens.length} tokens for ${address}`);
-  const resizedImagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
-  // fetch tokens that don't have images
-  const imageLessTokens: Token[] = [];
-  for (const token of tokens) {
-    const resizedImageLocalFile = path.join(resizedImagesDir, token.tokenId);
-    if (!fs.existsSync(resizedImageLocalFile)) {
-      imageLessTokens.push(token);
-    }
-  }
   try {
-    // build from os
-    await buildCollectionFromOS(address, imageLessTokens, resizedImagesDir);
-  } catch (err) {
-    console.error('Error building collection from opensea', address, err);
-    try {
-      // build from mnemonic
-      await buildCollectionFromMnemonic(address, imageLessTokens, resizedImagesDir);
-    } catch (err) {
-      console.error('Error building collection from mnemonic', address, err);
+    console.log(`============================== Building collection ${address} =================================`);
+    // check if collection is already downloaded to local file system
+    const collectionDir = path.join(__dirname, DATA_DIR, address);
+    if (fs.existsSync(collectionDir)) {
+      console.log('Collection', address, 'already downloaded. Skipping for now');
+      return;
     }
-  }
+    const tokensOfContractLimit = 50;
+    const tokenResponse = await mnemonic.getNFTsOfContract(address, tokensOfContractLimit, tokensOffset);
+    const tokens = tokenResponse.tokens;
+    if (tokens.length == 0) {
+      console.log('No tokens found for', address);
+      return;
+    }
+    console.log(`Found ${tokens.length} tokens for ${address}`);
+    const resizedImagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
+    // fetch tokens that don't have images
+    const imageLessTokens: Token[] = [];
+    for (const token of tokens) {
+      const resizedImageLocalFile = path.join(resizedImagesDir, token.tokenId);
+      if (!fs.existsSync(resizedImageLocalFile)) {
+        imageLessTokens.push(token);
+      }
+    }
+    try {
+      // build from os
+      await buildCollectionFromOS(address, imageLessTokens, resizedImagesDir);
+    } catch (err) {
+      console.error('Error building collection from opensea', address, err);
+      try {
+        // build from mnemonic
+        await buildCollectionFromMnemonic(address, imageLessTokens, resizedImagesDir);
+      } catch (err) {
+        console.error('Error building collection from mnemonic', address, err);
+      }
+    }
 
-  // recurse
-  if (tokens.length === tokensOfContractLimit) {
-    console.log('Building collection', address, 'recursing with offset', tokensOffset);
-    await buildCollection(address, tokensOffset + tokensOfContractLimit);
+    // recurse
+    if (tokens.length === tokensOfContractLimit) {
+      console.log('Building collection', address, 'recursing with offset', tokensOffset + tokensOfContractLimit);
+      await buildCollection(address, tokensOffset + tokensOfContractLimit);
+    }
+  } catch (err) {
+    console.error('Error building collection', address, err);
   }
 }
 
@@ -268,20 +272,24 @@ async function main() {
     }
     let done = false;
     while (!done) {
-      console.log(
-        `============================== Fetching collections from mnemonic, offset ${offset}, limit ${limit} =================================`
-      );
-      // write url to file
-      fs.writeFileSync(offsetFile, `${offset},${limit}`);
-      const colls = await mnemonic.getERC721Collections(offset, limit);
-      // break condition
-      if (colls.length < limit) {
-        done = true;
+      try {
+        console.log(
+          `============================== Fetching collections from mnemonic, offset ${offset}, limit ${limit} =================================`
+        );
+        // write url to file
+        fs.writeFileSync(offsetFile, `${offset},${limit}`);
+        const colls = await mnemonic.getERC721Collections(offset, limit);
+        // break condition
+        if (colls.length < limit) {
+          done = true;
+        }
+        for (const coll of colls) {
+          await buildCollection(coll.address, 0);
+        }
+        offset += limit;
+      } catch (err) {
+        console.error('Error fetching collections', err);
       }
-      for (const coll of colls) {
-        await buildCollection(coll.address, 0);
-      }
-      offset += limit;
     }
   }
 }
