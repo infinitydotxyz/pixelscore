@@ -7,7 +7,7 @@ import fs from 'fs';
 import { exec } from 'child_process';
 import MnemonicClient, { Token } from './mnemonic';
 import OpenSeaClient from './opensea';
-import MetadataClient from './Metadata';
+import MetadataClient from './metadata';
 
 const finished = promisify(stream.finished);
 const DATA_DIR = 'data';
