@@ -19,7 +19,7 @@ function getDirs(dirPath: string) {
 
   files.forEach((file) => {
     if (!file.endsWith('.url')) {
-       count++;
+      count++;
     }
   });
 }
