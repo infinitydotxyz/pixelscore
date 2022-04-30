@@ -266,10 +266,12 @@ async function main() {
     let limit = 50;
     let offset = 0;
     const offsetFile = path.join(__dirname, 'offset.txt');
-    const offsetAndLimit = fs.readFileSync(offsetFile, 'utf8').split(',');
-    if (offsetAndLimit.length == 2) {
-      offset = parseInt(offsetAndLimit[0]);
-      limit = parseInt(offsetAndLimit[1]);
+    if (fs.existsSync(offsetFile)) {
+      const offsetAndLimit = fs.readFileSync(offsetFile, 'utf8').split(',');
+      if (offsetAndLimit.length == 2) {
+        offset = parseInt(offsetAndLimit[0]);
+        limit = parseInt(offsetAndLimit[1]);
+      }
     }
     let done = false;
     while (!done) {
