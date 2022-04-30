@@ -11,6 +11,7 @@ import MetadataClient from './metadata';
 
 const finished = promisify(stream.finished);
 const DATA_DIR = 'data';
+const ERC1155_DATA_DIR = 'data_erc1155';
 const MNEMONIC_DATA_DIR = 'mnemonic_data';
 const IMAGES_DIR = 'resized';
 const METADATA_DIR = 'metadata';
@@ -132,7 +133,7 @@ async function buildCollection(address: string, tokensOffset = 0) {
   try {
     console.log(`============================== Building collection ${address} =================================`);
     // check if collection is already downloaded to local file system
-    const collectionDir = path.join(__dirname, DATA_DIR, address);
+    const collectionDir = path.join(__dirname, ERC1155_DATA_DIR, address);
     if (fs.existsSync(collectionDir)) {
       console.log('Collection', address, 'already downloaded. Skipping for now');
       return;
@@ -145,7 +146,7 @@ async function buildCollection(address: string, tokensOffset = 0) {
       return;
     }
     console.log(`Found ${tokens.length} tokens for ${address}`);
-    const resizedImagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
+    const resizedImagesDir = path.join(__dirname, ERC1155_DATA_DIR, address, IMAGES_DIR);
     // fetch tokens that don't have images
     const imageLessTokens: Token[] = [];
     for (const token of tokens) {
@@ -278,7 +279,7 @@ async function main() {
         );
         // write url to file
         fs.writeFileSync(offsetFile, `${offset},${limit}`);
-        const colls = await mnemonic.getERC721Collections(offset, limit);
+        const colls = await mnemonic.getERC1155Collections(offset, limit);
         // break condition
         if (colls.length < limit) {
           done = true;
