@@ -134,10 +134,10 @@ async function buildCollection(address: string, tokensOffset = 0) {
     console.log(`============================== Building collection ${address} =================================`);
     // check if collection is already downloaded to local file system
     const collectionDir = path.join(__dirname, DATA_DIR, address);
-    if (fs.existsSync(collectionDir)) {
-      console.log('Collection', address, 'already downloaded. Skipping for now');
-      return;
-    }
+    // if (fs.existsSync(collectionDir)) {
+    //   console.log('Collection', address, 'already downloaded. Skipping for now');
+    //   return;
+    // }
     const tokensOfContractLimit = 50;
     const tokenResponse = await mnemonic.getNFTsOfContract(address, tokensOfContractLimit, tokensOffset);
     const tokens = tokenResponse.tokens;
