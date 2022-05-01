@@ -6,6 +6,7 @@ const DATA_DIR = 'data';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE = 'metadata.csv';
 const IMAGES_DIR = 'resized';
+const DUMMY_RARITY = '-123';
 
 function main() {
   console.log('Creating metadata files...');
@@ -36,7 +37,7 @@ function createMetadataFiles(dirPath: string) {
         const imageFile = path.join(resizedImagesDir, imageFileName);
         if (fs.existsSync(imageFile)) {
           const [tokenId, imageUrl] = fs.readFileSync(urlFile, 'utf8').split(',');
-          fs.appendFileSync(metadataFile, `${tokenId},-123,-123,${imageUrl}\n`);
+          fs.appendFileSync(metadataFile, `${tokenId},${DUMMY_RARITY},${DUMMY_RARITY},${imageUrl}\n`);
         } else {
           console.error('Missing image:', imageFile);
         }
