@@ -23,7 +23,7 @@ function createMetadataFiles(dirPath: string) {
       // if (!fs.existsSync(metadataDir)) {
       // console.log(`Metadata dir does not exist. Creating it...`);
       // create metadata dir
-      mkdirSync(metadataDir, { recursive: true });
+      // mkdirSync(metadataDir, { recursive: true });
       // create metadata file
       const metadataFile = path.join(metadataDir, METADATA_FILE);
       // fs.closeSync(fs.openSync(metadataFile, 'w'));
