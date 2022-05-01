@@ -12,8 +12,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@infinityxyz/lib": "^1.50.0",
     "axios": "^0.26.0",
     "dotenv": "^10.0.0",
+    "ethers": "^5.6.4",
     "file-type": "^16.5.3",
     "firebase-admin": "^10.0.0",
     "got": "^11.8.3",

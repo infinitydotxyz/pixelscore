@@ -18,7 +18,7 @@ function getDirs(dirPath: string) {
   });
 
   files.forEach((file) => {
-    if (!file.endsWith('.url')) {
+    if (!file.endsWith('.url') || !file.endsWith('.csv')) {
       count++;
     }
   });

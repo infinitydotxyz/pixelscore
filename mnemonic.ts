@@ -31,7 +31,7 @@ export default class MnemonicClient {
     });
   }
 
-  async getERC721Collections(offset = 0, limit = 1): Promise<Contract[]> {
+  async getERC721Collections(offset = 0, limit = 1): Promise<MnemonicContract[]> {
     try {
       const res: Response<ContractsResponse> = await this.errorHandler(() => {
         return this.mnemonicClient.get(`contracts/v1beta1/all`, {
@@ -52,7 +52,7 @@ export default class MnemonicClient {
     }
   }
 
-  async getERC1155Collections(offset = 0, limit = 1): Promise<Contract[]> {
+  async getERC1155Collections(offset = 0, limit = 1): Promise<MnemonicContract[]> {
     try {
       const res: Response<ContractsResponse> = await this.errorHandler(() => {
         return this.mnemonicClient.get(`contracts/v1beta1/all`, {
@@ -73,9 +73,9 @@ export default class MnemonicClient {
     }
   }
 
-  async getCollection(address: string): Promise<Contract> {
+  async getCollection(address: string): Promise<MnemonicContract> {
     try {
-      const res: Response<{ contract: Contract }> = await this.errorHandler(() => {
+      const res: Response<{ contract: MnemonicContract }> = await this.errorHandler(() => {
         return this.mnemonicClient.get(`contracts/v1beta1/by_address/${address}`, {
           responseType: 'json'
         });
@@ -197,7 +197,7 @@ interface TokenMetadata {
   indexedAt: string; // rfc3399
 }
 
-export interface Contract {
+export interface MnemonicContract {
   type: string;
   mintEvent: {
     blockTimestamp: string; // RFC 3399 timestamp
@@ -212,5 +212,5 @@ export interface Contract {
 }
 
 interface ContractsResponse {
-  contracts: Contract[];
+  contracts: MnemonicContract[];
 }
