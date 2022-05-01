@@ -36,7 +36,7 @@ function createMetadataFiles(dirPath: string) {
         const imageFile = path.join(resizedImagesDir, imageFileName);
         if (fs.existsSync(imageFile)) {
           const [tokenId, imageUrl] = fs.readFileSync(urlFile, 'utf8').split(',');
-          fs.appendFileSync(metadataFile, `${tokenId},${imageUrl}\n`);
+          fs.appendFileSync(metadataFile, `${tokenId},-123,-123,${imageUrl}\n`);
         } else {
           console.error('Missing image:', imageFile);
         }
