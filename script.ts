@@ -17,7 +17,7 @@ function createMetadataFiles(dirPath: string) {
   const dirs = fs.readdirSync(dirPath).filter((file) => fs.statSync(path.join(dirPath, file)).isDirectory());
   dirs.forEach((dir) => {
     if (dir.startsWith('0x')) {
-      // console.log(`Working ${dir}...`);
+      console.log(`Working ${dir}...`);
       const metadataDir = path.join(dirPath, dir, METADATA_DIR);
       const resizedImagesDir = path.join(dirPath, dir, IMAGES_DIR);
       // if (!fs.existsSync(metadataDir)) {
