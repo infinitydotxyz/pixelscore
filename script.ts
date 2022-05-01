@@ -18,7 +18,7 @@ function createMetadataFiles(dirPath: string) {
   const dirs = fs.readdirSync(dirPath).filter((file) => fs.statSync(path.join(dirPath, file)).isDirectory());
   dirs.forEach((dir) => {
     if (dir.startsWith('0x')) {
-      console.log(`Working ${dir}...`);
+      // console.log(`Working ${dir}...`);
       const metadataDir = path.join(dirPath, dir, METADATA_DIR);
       const resizedImagesDir = path.join(dirPath, dir, IMAGES_DIR);
       // if (!fs.existsSync(metadataDir)) {
@@ -42,7 +42,7 @@ function createMetadataFiles(dirPath: string) {
         const imageFileName = urlFile.replace('.url', '');
         const imageFile = path.join(resizedImagesDir, imageFileName);
         if (fs.existsSync(imageFile)) {
-          const [tokenId, imageUrl] = fs.readFileSync(urlFile, 'utf8').split(',');
+          const [tokenId, imageUrl] = fs.readFileSync(path.join(resizedImagesDir, urlFile), 'utf8').split(',');
           fs.appendFileSync(metadataFile, `${tokenId},${DUMMY_RARITY},${DUMMY_RARITY},${imageUrl}\n`);
         } else {
           console.error('Missing image:', imageFile);
