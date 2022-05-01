@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { createWriteStream, mkdirSync } from 'fs';
+import { execSync, exec } from 'child_process';
 
 const DATA_DIR = 'data';
 const METADATA_DIR = 'metadata';
@@ -25,13 +26,18 @@ function createMetadataFiles(dirPath: string) {
       // create metadata dir
       // mkdirSync(metadataDir, { recursive: true });
       // create metadata file
-      const metadataFile = path.join(metadataDir, METADATA_FILE);
       // fs.closeSync(fs.openSync(metadataFile, 'w'));
 
       // read .url files from resized dir
       const urlFiles = fs
         .readdirSync(resizedImagesDir)
         .filter((file) => fs.statSync(path.join(resizedImagesDir, file)).isFile() && file.endsWith('.url'));
+      const metadataFile = path.join(metadataDir, METADATA_FILE);
+      if (urlFiles.length > 0) {
+        // recreate metadata file
+        execSync(`rm ${metadataFile}`);
+        execSync(`touch ${metadataFile}`);
+      }
       for (const urlFile of urlFiles) {
         const imageFileName = urlFile.replace('.url', '');
         const imageFile = path.join(resizedImagesDir, imageFileName);
