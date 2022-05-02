@@ -67,7 +67,9 @@ export interface TokenInfo {
 
 async function main() {
   console.log('Collecting data...');
-  await processCollections(path.join(__dirname, DATA_DIR));
+  const dirPath = path.join(__dirname, DATA_DIR);
+  // await processCollections(dirPath);
+  await processOneCollection(dirPath, '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d');
 }
 
 async function processCollections(dirPath: string) {
@@ -81,23 +83,28 @@ async function processCollections(dirPath: string) {
       } else if (fs.existsSync(collectionCompleteFile)) {
         console.log('Collection already processed:', collection);
       } else {
-        console.log('Collecting collection:', collection);
-        // save collection info
-        const collectionInfo = await getCollectionInfo(collection);
-        if (collectionInfo) {
-          const chainId = collectionInfo.chainId;
-          const collectionRef = pixelScoreDb.collection(COLLECTIONS_COLL).doc(chainId + ':' + collection);
-          pixelScoreDbBatchHandler.add(collectionRef, collectionInfo, { merge: true });
-          // save token info
-          const collectionDir = path.join(dirPath, dir);
-          await saveTokenInfo(collectionInfo.address, collectionRef, collectionDir, collectionInfo.slug);
-          console.log('Finished Collecting collection:', collection);
-          execSync(`touch ${collectionCompleteFile}`);
-        } else {
-          console.error('Collection info not found:', collection);
-        }
+        await processOneCollection(dirPath, collection);
       }
     }
+  }
+}
+
+async function processOneCollection(dirPath: string, collection: string) {
+  console.log('Collecting collection:', collection);
+  const collectionCompleteFile = path.join(dirPath, collection, COLLECTION_COMPLETE_FILE);
+  // save collection info
+  const collectionInfo = await getCollectionInfo(collection);
+  if (collectionInfo) {
+    const chainId = collectionInfo.chainId;
+    const collectionRef = pixelScoreDb.collection(COLLECTIONS_COLL).doc(chainId + ':' + collection);
+    pixelScoreDbBatchHandler.add(collectionRef, collectionInfo, { merge: true });
+    // save token info
+    const collectionDir = path.join(dirPath, collection);
+    await saveTokenInfo(collectionInfo.address, collectionRef, collectionDir, collectionInfo.slug);
+    console.log('Finished Collecting collection:', collection);
+    execSync(`touch ${collectionCompleteFile}`);
+  } else {
+    console.error('Collection info not found:', collection);
   }
 }
 
