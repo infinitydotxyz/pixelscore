@@ -21,13 +21,6 @@ function createMetadataFiles(dirPath: string) {
       // console.log(`Working ${dir}...`);
       const metadataDir = path.join(dirPath, dir, METADATA_DIR);
       const resizedImagesDir = path.join(dirPath, dir, IMAGES_DIR);
-      // if (!fs.existsSync(metadataDir)) {
-      // console.log(`Metadata dir does not exist. Creating it...`);
-      // create metadata dir
-      // mkdirSync(metadataDir, { recursive: true });
-      // create metadata file
-      // fs.closeSync(fs.openSync(metadataFile, 'w'));
-
       // read .url files from resized dir
       const urlFiles = fs
         .readdirSync(resizedImagesDir)
@@ -48,7 +41,6 @@ function createMetadataFiles(dirPath: string) {
           console.error('Missing image:', imageFile);
         }
       }
-      // }
     }
   });
 }
