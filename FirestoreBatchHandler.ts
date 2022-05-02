@@ -13,8 +13,8 @@ export default class FirestoreBatchHandler {
   private db: FirebaseFirestore.Firestore;
 
   constructor(firestore: FirebaseFirestore.Firestore) {
-    this.currentBatch = this.newBatch();
     this.db = firestore;
+    this.currentBatch = this.newBatch();
   }
 
   get size(): number {
