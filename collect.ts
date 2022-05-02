@@ -1,22 +1,17 @@
-import fs from 'fs';
-import path from 'path';
-import fbAdmin from 'firebase-admin';
-import * as stream from 'stream';
-import { promisify } from 'util';
-import axios from 'axios';
-import { createWriteStream, mkdirSync } from 'fs';
-import { QuerySnapshot, DocumentData, QueryDocumentSnapshot } from '@google-cloud/firestore';
+import { BaseCollection } from '@infinityxyz/lib/types/core/Collection';
+import { getSearchFriendlyString, trimLowerCase } from '@infinityxyz/lib/utils';
 import { execSync } from 'child_process';
 import { ethers } from 'ethers';
-
-import pixelScoreServiceAccount from './creds/pixelscore-firebase-creds.json';
-import infinityServiceAccount from './creds/pixelscore-firebase-creds.json';
-import MnemonicClient from './mnemonic';
-import OpenSeaClient from './opensea';
-import { BaseCollection } from '@infinityxyz/lib/types/core/Collection';
-import { trimLowerCase, getSearchFriendlyString } from '@infinityxyz/lib/utils';
-import { MnemonicContract } from './mnemonic';
+import fbAdmin from 'firebase-admin';
+import fs from 'fs';
+import path from 'path';
+import {
+  default as infinityServiceAccount,
+  default as pixelScoreServiceAccount
+} from './creds/pixelscore-firebase-creds.json';
 import FirestoreBatchHandler from './FirestoreBatchHandler';
+import MnemonicClient, { MnemonicContract } from './mnemonic';
+import OpenSeaClient from './opensea';
 
 const fsAdminPixelScore = fbAdmin.initializeApp({
   credential: fbAdmin.credential.cert(pixelScoreServiceAccount as fbAdmin.ServiceAccount)
@@ -33,7 +28,7 @@ const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 const DATA_DIR = 'data';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE = 'metadata.csv';
-const RESIZED_IMAGES_DIR = 'resized';
+const COLLECTION_COMPLETE_FILE = 'collection-complete.txt';
 const COLLECTIONS_COLL = 'collections';
 const TOKENS_SUB_COLL = 'tokens';
 
@@ -72,28 +67,32 @@ export interface TokenInfo {
 
 async function main() {
   console.log('Collecting data...');
-  await getDirs(path.join(__dirname, DATA_DIR));
+  await processCollections(path.join(__dirname, DATA_DIR));
 }
 
-async function getDirs(dirPath: string) {
+async function processCollections(dirPath: string) {
   const dirs = fs.readdirSync(dirPath).filter((file) => fs.statSync(path.join(dirPath, file)).isDirectory());
-  const files = fs.readdirSync(dirPath).filter((file) => fs.statSync(path.join(dirPath, file)).isFile());
-
   for (const dir of dirs) {
     if (dir.startsWith('0x')) {
-      const collection = dir.trim().toLowerCase();
+      const collection = trimLowerCase(dir);
+      const collectionCompleteFile = path.join(dirPath, dir, COLLECTION_COMPLETE_FILE);
       if (!ethers.utils.isAddress(collection)) {
         console.error('Invalid collection:', collection);
+      } else if (fs.existsSync(collectionCompleteFile)) {
+        console.log('Collection already processed:', collection);
       } else {
         console.log('Collecting collection:', collection);
         // save collection info
         const collectionInfo = await getCollectionInfo(collection);
-        const collectionRef = pixelScoreDb.collection(COLLECTIONS_COLL).doc(collection);
         if (collectionInfo) {
+          const chainId = collectionInfo.chainId;
+          const collectionRef = pixelScoreDb.collection(COLLECTIONS_COLL).doc(chainId + ':' + collection);
           pixelScoreDbBatchHandler.add(collectionRef, collectionInfo, { merge: true });
           // save token info
           const collectionDir = path.join(dirPath, dir);
-          await saveTokenInfo(collectionRef, collectionDir, collectionInfo.slug);
+          await saveTokenInfo(collectionInfo.address, collectionRef, collectionDir, collectionInfo.slug);
+          console.log('Finished Collecting collection:', collection);
+          execSync(`touch ${collectionCompleteFile}`);
         } else {
           console.error('Collection info not found:', collection);
         }
@@ -103,20 +102,21 @@ async function getDirs(dirPath: string) {
 }
 
 async function saveTokenInfo(
+  collectionAddress: string,
   collectionRef: FirebaseFirestore.DocumentReference,
   collectionDir: string,
   collectionSlug: string
 ) {
   const metadataFile = path.join(collectionDir, METADATA_DIR, METADATA_FILE);
   if (fs.existsSync(metadataFile)) {
-    console.log('Found metadata file:', metadataFile);
+    console.log('Reading metadata file:', metadataFile);
     const lines = fs.readFileSync(metadataFile, 'utf8').split('\n');
     for (const line of lines) {
       const [tokenId, rarityScore, rarityRank, imageUrl] = line.split(',');
       const tokenDocRef = collectionRef.collection(TOKENS_SUB_COLL).doc(tokenId);
       const tokenInfo: TokenInfo = {
         chainId: '1',
-        collectionAddress: collectionRef.id,
+        collectionAddress: trimLowerCase(collectionAddress),
         collectionSlug: collectionSlug,
         tokenId: tokenId,
         imageUrl: imageUrl,
@@ -125,7 +125,6 @@ async function saveTokenInfo(
       };
       pixelScoreDbBatchHandler.add(tokenDocRef, tokenInfo, { merge: true });
     }
-  } else {
   }
 }
 
