@@ -13,13 +13,19 @@ import FirestoreBatchHandler from './FirestoreBatchHandler';
 import MnemonicClient, { MnemonicContract } from './mnemonic';
 import OpenSeaClient from './opensea';
 
-const fsAdminPixelScore = fbAdmin.initializeApp({
-  credential: fbAdmin.credential.cert(pixelScoreServiceAccount as fbAdmin.ServiceAccount)
-});
+const fsAdminPixelScore = fbAdmin.initializeApp(
+  {
+    credential: fbAdmin.credential.cert(pixelScoreServiceAccount as fbAdmin.ServiceAccount)
+  },
+  'pixelscore'
+);
 
-const fsAdminInfinity = fbAdmin.initializeApp({
-  credential: fbAdmin.credential.cert(infinityServiceAccount as fbAdmin.ServiceAccount)
-});
+const fsAdminInfinity = fbAdmin.initializeApp(
+  {
+    credential: fbAdmin.credential.cert(infinityServiceAccount as fbAdmin.ServiceAccount)
+  },
+  'infinity'
+);
 
 const pixelScoreDb = fsAdminPixelScore.firestore();
 const infinityDb = fsAdminInfinity.firestore();
