@@ -133,17 +133,20 @@ async function saveTokenInfo(
       const lines = fs.readFileSync(metadataFile, 'utf8').split('\n');
       for (const line of lines) {
         const [tokenId, rarityScore, rarityRank, imageUrl] = line.split(',');
-        const tokenDocRef = collectionRef.collection(TOKENS_SUB_COLL).doc(tokenId);
-        const tokenInfo: TokenInfo = {
-          chainId: '1',
-          collectionAddress: trimLowerCase(collectionAddress),
-          collectionSlug: collectionSlug,
-          tokenId: tokenId,
-          imageUrl: imageUrl,
-          rarityScore: parseFloat(rarityScore),
-          rarityRank: parseInt(rarityRank)
-        };
-        pixelScoreDbBatchHandler.add(tokenDocRef, tokenInfo, { merge: true });
+        // to account for empty lines
+        if (tokenId) {
+          const tokenDocRef = collectionRef.collection(TOKENS_SUB_COLL).doc(tokenId);
+          const tokenInfo: TokenInfo = {
+            chainId: '1',
+            collectionAddress: trimLowerCase(collectionAddress),
+            collectionSlug: collectionSlug,
+            tokenId: tokenId,
+            imageUrl: imageUrl,
+            rarityScore: parseFloat(rarityScore),
+            rarityRank: parseInt(rarityRank)
+          };
+          pixelScoreDbBatchHandler.add(tokenDocRef, tokenInfo, { merge: true });
+        }
       }
     }
   } catch (error) {
