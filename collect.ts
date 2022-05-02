@@ -97,7 +97,7 @@ async function processCollections(dirPath: string) {
 
 async function processOneCollection(dirPath: string, collection: string) {
   try {
-    console.log('Collecting collection:', collection);
+    console.log('======================== Collecting collection:' + collection + '========================');
     const collectionCompleteFile = path.join(dirPath, collection, COLLECTION_COMPLETE_FILE);
     // save collection info
     const collectionInfo = await getCollectionInfo(collection);
@@ -110,7 +110,9 @@ async function processOneCollection(dirPath: string, collection: string) {
       await saveTokenInfo(collectionInfo.address, collectionRef, collectionDir, collectionInfo.slug);
       // commit any remaining data
       await pixelScoreDbBatchHandler.flush();
-      console.log('Finished Collecting collection:', collection);
+      console.log(
+        '======================== Finished Collecting collection:' + collection + '======================== \n\n\n'
+      );
       execSync(`touch ${collectionCompleteFile}`);
     } else {
       console.error('Collection info not found:', collection);
