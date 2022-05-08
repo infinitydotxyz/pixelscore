@@ -6,8 +6,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.ts",
-    "build": "rimraf dist && tsc",
-    "start": "node dist/index.js"
+    "build": "npm run update:lib && rimraf dist && tsc",
+    "start": "node dist/index.js",
+    "update:lib": "npm update @infinityxyz/lib"
   },
   "author": "",
   "license": "ISC",
