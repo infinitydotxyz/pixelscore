@@ -25,6 +25,7 @@ app.post('/webhooks/alchemy/padw', (req: Request, res: Response) => {
   if (isValidSignature(req)) {
     const isValidRequest = checkRequestValidity(req);
     if (isValidRequest) {
+      console.log('Valid request');
     }
     res.sendStatus(200);
   } else {
