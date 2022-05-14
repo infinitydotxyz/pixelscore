@@ -5,10 +5,11 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon index.ts",
+    "dev": "nodemon src/index.ts",
     "build": "npm run update:lib && rimraf dist && tsc",
-    "start": "node dist/index.js",
-    "update:lib": "npm update @infinityxyz/lib"
+    "start": "node dist/src/index.js",
+    "update:lib": "npm update @infinityxyz/lib",
+    "deploy": "gcloud app deploy -q --project=pixelscore-9ec2a"
   },
   "author": "",
   "license": "ISC",
@@ -17,15 +18,13 @@
     "axios": "^0.26.0",
     "dotenv": "^10.0.0",
     "ethers": "^5.6.4",
+    "express": "^4.18.1",
     "file-type": "^16.5.3",
     "firebase-admin": "^10.0.0",
     "got": "^11.8.3",
     "it-reader": "^3.0.0",
-    "nodemon": "^2.0.15",
     "p-queue": "^6.6.2",
-    "rimraf": "^3.0.2",
-    "ts-node": "^10.5.0",
-    "typescript": "^4.5.5"
+    "rimraf": "^3.0.2"
   },
   "prettier": {
     "tabWidth": 2,
@@ -33,5 +32,13 @@
     "singleQuote": true,
     "trailingComma": "none",
     "semi": true
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "@types/node": "^17.0.33",
+    "concurrently": "^7.1.0",
+    "nodemon": "^2.0.16",
+    "ts-node": "^10.7.0",
+    "typescript": "^4.6.4"
   }
 }

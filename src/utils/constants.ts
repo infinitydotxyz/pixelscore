@@ -1,5 +1,11 @@
 import 'dotenv/config';
 
+export const PIXELSCORE_WALLET = '0xb01ab20314e743b62836ca7060fc56ab69157bc1';
+export const PIXELSCORE_PRICE = 0.1;
+export const ALCHEMY_WEBHOOK_ASSET_ETH = 'ETH';
+export const ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL = 'external';
+export const ALCHEMY_WEBHOOK_ETH_MAINNET = 'ETH_MAINNET';
+
 const getInfuraIPFSAuthKeys = (): string[] => {
   const apiKeys = [];
 
