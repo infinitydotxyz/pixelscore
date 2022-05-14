@@ -8,10 +8,10 @@ import path from 'path';
 import {
   default as infinityServiceAccount,
   default as pixelScoreServiceAccount
-} from './creds/pixelscore-firebase-creds.json';
-import FirestoreBatchHandler from './FirestoreBatchHandler';
-import MnemonicClient, { MnemonicContract } from './mnemonic';
-import OpenSeaClient from './opensea';
+} from '../../creds/pixelscore-firebase-creds.json';
+import FirestoreBatchHandler from '../utils/FirestoreBatchHandler';
+import MnemonicClient, { MnemonicContract } from '../utils/mnemonic';
+import OpenSeaClient from '../utils/opensea';
 
 const fsAdminPixelScore = fbAdmin.initializeApp(
   {

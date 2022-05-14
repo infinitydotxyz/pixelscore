@@ -5,9 +5,9 @@ import { createWriteStream, mkdirSync } from 'fs';
 import path from 'path';
 import fs from 'fs';
 import { exec } from 'child_process';
-import MnemonicClient, { Token } from './mnemonic';
-import OpenSeaClient from './opensea';
-import MetadataClient from './metadata';
+import MnemonicClient, { Token } from '../utils/mnemonic';
+import OpenSeaClient from '../utils/opensea';
+import MetadataClient from '../utils/metadata';
 
 const finished = promisify(stream.finished);
 const DATA_DIR = 'data';

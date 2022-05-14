@@ -1,4 +1,4 @@
-import { randomItem, sleep } from './utils';
+import { randomItem, sleep } from './main';
 import { OPENSEA_API_KEYS } from './constants';
 import got, { Got, Response } from 'got/dist/source';
 import { gotErrorHandler } from './got';

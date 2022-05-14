@@ -3,7 +3,7 @@ import got, { Got, Options, Response } from 'got/dist/source';
 import PQueue from 'p-queue';
 // import { detectContentType } from './sniff';
 import { Readable } from 'stream';
-import { randomItem } from './utils';
+import { randomItem } from './main';
 import NotFoundError from './NotFound';
 import { normalize } from 'path';
 

@@ -1,4 +1,4 @@
-import { sleep } from './utils';
+import { sleep } from './main';
 import { error } from '@infinityxyz/lib/utils';
 
 const MAX_SIZE = 500;

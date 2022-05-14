@@ -1,6 +1,6 @@
 import got, { Got, Response } from 'got/dist/source';
 import { MNEMONIC_API_KEYS } from './constants';
-import { randomItem, sleep } from './utils';
+import { randomItem, sleep } from './main';
 import { gotErrorHandler } from './got';
 
 export default class MnemonicClient {
