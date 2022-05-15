@@ -1,10 +1,40 @@
 import 'dotenv/config';
+import { ethers } from 'ethers';
+
+export const AUTH_HEADERS = {
+  signature: 'x-auth-signature',
+  message: 'x-auth-message'
+};
 
 export const PIXELSCORE_WALLET = '0xb01ab20314e743b62836ca7060fc56ab69157bc1';
-export const PIXELSCORE_PRICE = 0.1;
+export const PIXELSCORE_PRICE_PER_ITEM = 0.1;
 export const ALCHEMY_WEBHOOK_ASSET_ETH = 'ETH';
 export const ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL = 'external';
 export const ALCHEMY_WEBHOOK_ETH_MAINNET = 'ETH_MAINNET';
+export const REVEAL_ITEMS_LIMIT = 500;
+export const DEFAULT_PAGE_LIMIT = 50;
+
+// infinity firestore constants
+export const COLLECTIONS_COLL = 'collections';
+
+// pixelscore firestore constants
+export const WEBHOOK_EVENTS_COLL = 'webhookEvents';
+export const RANKINGS_COLL = 'rankings';
+export const REVEALS_COLL = 'reveals';
+export const NFTS_SUB_COLL = 'nfts';
+export const REVEALS_ITEMS_SUB_COLL = 'revealItems';
+
+const ethProvider = new ethers.providers.JsonRpcProvider(process.env.alchemyJsonRpcEthMainnet);
+const polygonProvider = new ethers.providers.JsonRpcProvider(process.env.alchemyJsonRpcPolygonMainnet);
+
+export function getProvider(chainId: string) {
+  if (chainId === '1') {
+    return ethProvider;
+  } else if (chainId === '137') {
+    return polygonProvider;
+  }
+  return null;
+}
 
 const getInfuraIPFSAuthKeys = (): string[] => {
   const apiKeys = [];

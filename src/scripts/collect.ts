@@ -2,74 +2,23 @@ import { BaseCollection } from '@infinityxyz/lib/types/core/Collection';
 import { getSearchFriendlyString, trimLowerCase } from '@infinityxyz/lib/utils';
 import { execSync } from 'child_process';
 import { ethers } from 'ethers';
-import fbAdmin from 'firebase-admin';
 import fs from 'fs';
 import path from 'path';
-import {
-  default as infinityServiceAccount,
-  default as pixelScoreServiceAccount
-} from '../../creds/pixelscore-firebase-creds.json';
-import FirestoreBatchHandler from '../utils/FirestoreBatchHandler';
+import { CollectionInfo, TokenInfo } from '../types/main';
+import { COLLECTIONS_COLL, NFTS_SUB_COLL, RANKINGS_COLL } from '../utils/constants';
+import { infinityDb, pixelScoreDb } from '../utils/firestore';
+import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
 import MnemonicClient, { MnemonicContract } from '../utils/mnemonic';
 import OpenSeaClient from '../utils/opensea';
 
-const fsAdminPixelScore = fbAdmin.initializeApp(
-  {
-    credential: fbAdmin.credential.cert(pixelScoreServiceAccount as fbAdmin.ServiceAccount)
-  },
-  'pixelscore'
-);
-
-const fsAdminInfinity = fbAdmin.initializeApp(
-  {
-    credential: fbAdmin.credential.cert(infinityServiceAccount as fbAdmin.ServiceAccount)
-  },
-  'infinity'
-);
-
-const pixelScoreDb = fsAdminPixelScore.firestore();
-const infinityDb = fsAdminInfinity.firestore();
 const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
-
 const DATA_DIR = 'data';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE = 'metadata.csv';
 const COLLECTION_COMPLETE_FILE = 'collection-complete.txt';
-const COLLECTIONS_COLL = 'collections';
-const TOKENS_SUB_COLL = 'tokens';
 
 const mnemonic = new MnemonicClient();
 const opensea = new OpenSeaClient();
-
-export interface CollectionInfo {
-  address: string;
-  chainId: string;
-  tokenStandard: string;
-  slug: string;
-  name: string;
-  symbol: string;
-  description: string;
-  profileImage: string;
-  bannerImage: string;
-  cardDisplaytype?: string;
-  twitter?: string;
-  discord?: string;
-  external?: string;
-}
-
-export interface TokenInfo {
-  chainId: string;
-  collectionAddress: string;
-  collectionSlug: string;
-  tokenId: string;
-  imageUrl: string;
-  rarityScore?: number;
-  rarityRank?: number;
-  collectionPixelScore?: number;
-  collectionPixelRank?: number;
-  pixelScore?: number;
-  pixelRank?: number;
-}
 
 async function main() {
   console.log('Collecting data...');
@@ -103,7 +52,7 @@ async function processOneCollection(dirPath: string, collection: string) {
     const collectionInfo = await getCollectionInfo(collection);
     if (collectionInfo) {
       const chainId = collectionInfo.chainId;
-      const collectionRef = pixelScoreDb.collection(COLLECTIONS_COLL).doc(chainId + ':' + collection);
+      const collectionRef = pixelScoreDb.collection(RANKINGS_COLL).doc(chainId + ':' + collection);
       pixelScoreDbBatchHandler.add(collectionRef, collectionInfo, { merge: true });
       // save token info
       const collectionDir = path.join(dirPath, collection);
@@ -137,7 +86,7 @@ async function saveTokenInfo(
         const [tokenId, rarityScore, rarityRank, imageUrl] = line.split(',');
         // to account for empty lines
         if (tokenId) {
-          const tokenDocRef = collectionRef.collection(TOKENS_SUB_COLL).doc(tokenId);
+          const tokenDocRef = collectionRef.collection(NFTS_SUB_COLL).doc(tokenId);
           const tokenInfo: TokenInfo = {
             chainId: '1',
             collectionAddress: trimLowerCase(collectionAddress),

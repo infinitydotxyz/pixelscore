@@ -4,7 +4,7 @@ import PQueue from 'p-queue';
 // import { detectContentType } from './sniff';
 import { Readable } from 'stream';
 import { randomItem } from './main';
-import NotFoundError from './NotFound';
+import NotFoundError from './notFound';
 import { normalize } from 'path';
 
 // todo: joe another protocol is possible: 'data:'
