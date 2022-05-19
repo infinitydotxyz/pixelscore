@@ -9,9 +9,16 @@
       "request": "launch",
       "name": "Launch Program",
       "skipFiles": ["<node_internals>/**"],
-      "program": "${workspaceFolder}/scripts/100m.ts",
+      "program": "${workspaceFolder}/src/scripts/100m.ts",
       "preLaunchTask": "tsc: build - tsconfig.json",
       "outFiles": ["${workspaceFolder}/**/*.js"]
+    },
+    {
+      "type": "node-terminal",
+      "name": "Run Script: dev",
+      "request": "launch",
+      "command": "npm run dev",
+      "cwd": "${workspaceFolder}"
     }
   ]
 }
