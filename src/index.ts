@@ -1,6 +1,7 @@
 import { jsonString, trimLowerCase } from '@infinityxyz/lib/utils';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
+import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
 import { AlchemyAddressActivityWebHook, RevealOrder, TokenInfo, UpdateRankVisibility } from './types/main';
 import {
@@ -25,6 +26,26 @@ dotenv.config();
 
 const app: Express = express();
 app.use(express.json());
+
+export const localHost = /http:\/\/localhost:\d+/;
+const whitelist = [localHost];
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, callback) => {
+    const result = whitelist.filter((regEx, index) => {
+      if (origin?.match(regEx)) {
+        return true;
+      } else {
+        return false;
+      }
+    });
+
+    let originIsWhitelisted = result.length > 0;
+
+    callback(originIsWhitelisted ? null : Error('Bad Request'), originIsWhitelisted);
+  }
+};
+app.use(cors(corsOptions));
+
 const port = process.env.PORT ?? 3000;
 
 const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
