@@ -32,11 +32,7 @@ const whitelist = [localHost];
 const corsOptions: cors.CorsOptions = {
   origin: (origin, callback) => {
     const result = whitelist.filter((regEx, index) => {
-      if (origin?.match(regEx)) {
-        return true;
-      } else {
-        return false;
-      }
+      return origin?.match(regEx);
     });
 
     let originIsWhitelisted = result.length > 0;
