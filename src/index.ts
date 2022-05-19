@@ -35,6 +35,80 @@ app.listen(port, () => {
 
 app.use('/u/*', authenticateUser);
 
+// ========================================= GET REQUESTS =========================================
+
+app.get('/u/:user/reveals', async (req: Request, res: Response) => {
+  const user = trimLowerCase(req.params.user);
+  console.log('Fetching reveals for user', user);
+  const startAfterTimestamp = parseInt(String(req.query.startAfterTimestamp)) ?? Date.now();
+  try {
+    const revealSnap = await pixelScoreDb
+      .collection(REVEALS_COLL)
+      .where('revealer', '==', user)
+      .where('chainId', '==', '1')
+      .limit(DEFAULT_PAGE_LIMIT)
+      .orderBy('timestamp', 'desc')
+      .startAfter(startAfterTimestamp)
+      .get();
+
+    const resp: RevealOrder[] = [];
+    for (const revealDoc of revealSnap.docs) {
+      const revealDocData = revealDoc.data() as RevealOrder;
+      const revealItemsSnap = await revealDoc.ref.collection(REVEALS_ITEMS_SUB_COLL).get();
+      for (const revealItemDoc of revealItemsSnap.docs) {
+        const revealItemDocData = revealItemDoc.data() as TokenInfo;
+        revealDocData.revealItems.push(revealItemDocData);
+      }
+      resp.push(revealDocData);
+    }
+    res.send(resp);
+  } catch (err) {
+    console.error('Error while getting reveals for user', user, err);
+    res.sendStatus(500);
+  }
+});
+
+// ========================================= POST REQUESTS =========================================
+
+// endpoint that receives webhook events from Alchemy
+app.post('/webhooks/alchemy/padw', (req: Request, res: Response) => {
+  console.log('padw webhook body', JSON.stringify(req.body));
+  try {
+    if (isValidSignature(req) && isValidRequest(req)) {
+      const data = req.body as AlchemyAddressActivityWebHook;
+      // first store webhook data in firestore
+      const webHookEventId = data.id;
+      pixelScoreDb
+        .collection(WEBHOOK_EVENTS_COLL)
+        .doc(webHookEventId)
+        .set(data, { merge: true })
+        .then(() => {
+          console.log('webhook data stored in firestore with id', webHookEventId);
+        })
+        .catch((err) => {
+          console.error('Error while storing webhook data in firestore', webHookEventId, err);
+        });
+
+      // then update reveal order
+      updateRevealOrder(data)
+        .then(() => {
+          console.log(`Successfully processed reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`);
+          res.sendStatus(200);
+        })
+        .catch((err) => {
+          console.error(`Error processing reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`);
+          throw err;
+        });
+    } else {
+      throw new Error('Invalid signature or request');
+    }
+  } catch (err) {
+    console.error('Error while processing padw webhook', err);
+    res.sendStatus(500);
+  }
+});
+
+// user action endpoints
 app.post('/u/:user/reveals', (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
   console.log('Saving reveals for user', user);
@@ -84,74 +158,6 @@ app.post('/u/:user/reveals', (req: Request, res: Response) => {
       });
   } catch (err) {
     console.error('Error while saving reveals for user', user, err);
-    res.sendStatus(500);
-  }
-});
-
-app.get('/u/:user/reveals', async (req: Request, res: Response) => {
-  const user = trimLowerCase(req.params.user);
-  console.log('Fetching reveals for user', user);
-  const startAfterTimestamp = parseInt(String(req.query.startAfterTimestamp)) ?? Date.now();
-  try {
-    const revealSnap = await pixelScoreDb
-      .collection(REVEALS_COLL)
-      .where('revealer', '==', user)
-      .where('chainId', '==', '1')
-      .limit(DEFAULT_PAGE_LIMIT)
-      .orderBy('timestamp', 'desc')
-      .startAfter(startAfterTimestamp)
-      .get();
-
-    const resp: RevealOrder[] = [];
-    for (const revealDoc of revealSnap.docs) {
-      const revealDocData = revealDoc.data() as RevealOrder;
-      const revealItemsSnap = await revealDoc.ref.collection(REVEALS_ITEMS_SUB_COLL).get();
-      for (const revealItemDoc of revealItemsSnap.docs) {
-        const revealItemDocData = revealItemDoc.data() as TokenInfo;
-        revealDocData.revealItems.push(revealItemDocData);
-      }
-      resp.push(revealDocData);
-    }
-    res.send(resp);
-  } catch (err) {
-    console.error('Error while getting reveals for user', user, err);
-    res.sendStatus(500);
-  }
-});
-
-app.post('/webhooks/alchemy/padw', (req: Request, res: Response) => {
-  console.log('padw webhook body', JSON.stringify(req.body));
-  try {
-    if (isValidSignature(req) && isValidRequest(req)) {
-      const data = req.body as AlchemyAddressActivityWebHook;
-      // first store webhook data in firestore
-      const webHookEventId = data.id;
-      pixelScoreDb
-        .collection(WEBHOOK_EVENTS_COLL)
-        .doc(webHookEventId)
-        .set(data, { merge: true })
-        .then(() => {
-          console.log('webhook data stored in firestore with id', webHookEventId);
-        })
-        .catch((err) => {
-          console.error('Error while storing webhook data in firestore', webHookEventId, err);
-        });
-
-      // then update reveal order
-      updateRevealOrder(data)
-        .then(() => {
-          console.log(`Successfully processed reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`);
-          res.sendStatus(200);
-        })
-        .catch((err) => {
-          console.error(`Error processing reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`);
-          throw err;
-        });
-    } else {
-      throw new Error('Invalid signature or request');
-    }
-  } catch (err) {
-    console.error('Error while processing padw webhook', err);
     res.sendStatus(500);
   }
 });
@@ -235,6 +241,8 @@ app.post('/u/:user/rankVisibility', async (req: Request, res: Response) => {
     res.sendStatus(500);
   }
 });
+
+// ============================================ HELPER FUNCTIONS ============================================
 
 async function updatePendingTxn(
   user: string,
