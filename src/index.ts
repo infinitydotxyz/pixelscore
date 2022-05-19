@@ -18,7 +18,7 @@ import {
   WEBHOOK_EVENTS_COLL
 } from './utils/constants';
 import { pixelScoreDb } from './utils/firestore';
-import FirestoreBatchHandler from './utils/FirestoreBatchHandler';
+import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { authenticateUser, getDocIdHash } from './utils/main';
 
 dotenv.config();
