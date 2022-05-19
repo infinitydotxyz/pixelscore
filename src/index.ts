@@ -27,10 +27,11 @@ dotenv.config();
 const app: Express = express();
 app.use(express.json());
 
+// todo: change this
 export const localHost = /http:\/\/localhost:\d+/;
 const whitelist = [localHost];
 const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: Function) => {
     const result = whitelist.filter((regEx, index) => {
       if (origin?.match(regEx)) {
         return true;
@@ -46,13 +47,12 @@ const corsOptions: cors.CorsOptions = {
 };
 app.use(cors(corsOptions));
 
-const port = process.env.PORT ?? 3000;
-
-const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
-
+const port = process.env.PORT ?? 5000;
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
+
+const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 
 app.use('/u/*', authenticateUser);
 
