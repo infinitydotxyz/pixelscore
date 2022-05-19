@@ -1,9 +1,26 @@
-import { jsonString, trimLowerCase } from '@infinityxyz/lib/utils';
+import { ChainId, Collection, CreationFlow } from '@infinityxyz/lib/types/core';
+import {
+  firestoreConstants,
+  getCollectionDocId,
+  getEndCode,
+  getSearchFriendlyString,
+  jsonString,
+  trimLowerCase
+} from '@infinityxyz/lib/utils';
+import cors from 'cors';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
-import cors from 'cors';
 import express, { Express, Request, Response } from 'express';
+import { ExternalNftArray, Nft, NftArray } from 'types/firestore';
 import { AlchemyAddressActivityWebHook, RevealOrder, TokenInfo, UpdateRankVisibility } from './types/main';
+import {
+  CollectionQueryOptions,
+  CollectionSearchQuery,
+  NftQuery,
+  NftsOrderBy,
+  NftsQuery,
+  UserNftsQuery
+} from './types/apiQueries';
 import {
   ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL,
   ALCHEMY_WEBHOOK_ASSET_ETH,
@@ -18,9 +35,17 @@ import {
   REVEAL_ITEMS_LIMIT,
   WEBHOOK_EVENTS_COLL
 } from './utils/constants';
-import { pixelScoreDb } from './utils/firestore';
+import { infinityDb, pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
-import { authenticateUser, getDocIdHash } from './utils/main';
+import { authenticateUser, decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
+import { BigNumber } from 'ethers';
+import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from 'utils/alchemy';
+import {
+  getCollectionByAddress,
+  getCollectionsByAddress,
+  getNftsFromInfinityFirestore,
+  isCollectionSupported
+} from 'utils/infinity';
 
 dotenv.config();
 
@@ -56,15 +81,130 @@ app.use('/u/*', authenticateUser);
 
 // ################################# Public endpoints #################################
 
-app.get('/collections/:chainId/:collectionAddress', async (req: Request, res: Response) => {});
+app.get('/collections/search', async (req: Request, res: Response) => {
+  const search = req.query as CollectionSearchQuery;
+  const limit = search.limit ?? DEFAULT_PAGE_LIMIT;
+  let firestoreQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = infinityDb.collection(
+    firestoreConstants.COLLECTIONS_COLL
+  );
 
-app.get('/collections/:chainId/:collectionAddress/nfts', async (req: Request, res: Response) => {});
+  if (search.query) {
+    const startsWith = getSearchFriendlyString(search.query);
+    const endCode = getEndCode(startsWith);
 
-app.get('/collections/search', async (req: Request, res: Response) => {});
+    if (startsWith && endCode) {
+      firestoreQuery = firestoreQuery.where('slug', '>=', startsWith).where('slug', '<', endCode);
+    }
+  }
+
+  firestoreQuery = firestoreQuery.orderBy('slug');
+
+  const cursor = decodeCursor(search.cursor);
+  if (cursor) {
+    firestoreQuery = firestoreQuery.startAfter(cursor);
+  }
+
+  const snapshot = await firestoreQuery
+    .select(
+      'address',
+      'chainId',
+      'slug',
+      'metadata.name',
+      'metadata.profileImage',
+      'metadata.description',
+      'metadata.bannerImage',
+      'hasBlueCheck'
+    )
+    .limit(limit + 1) // +1 to check if there are more results
+    .get();
+
+  const collections = snapshot.docs.map((doc) => {
+    const data = doc.data();
+    return {
+      address: data.address as string,
+      chainId: data.chainId as string,
+      slug: data.slug as string,
+      name: data.metadata.name as string,
+      hasBlueCheck: data.hasBlueCheck as boolean,
+      profileImage: data.metadata.profileImage as string,
+      bannerImage: data.metadata.bannerImage as string,
+      description: data.metadata.description as string
+    };
+  });
+
+  const hasNextPage = collections.length > limit;
+  if (hasNextPage) {
+    collections.pop(); // Remove item used to check if there are more results
+  }
+  const updatedCursor = encodeCursor(collections?.[collections?.length - 1]?.slug ?? ''); // Must be after we pop the item used for pagination
+
+  res.send({
+    data: collections,
+    cursor: updatedCursor,
+    hasNextPage
+  });
+});
+
+app.get('/collections/:chainId/:collectionAddress', async (req: Request, res: Response) => {
+  const queryOptions = (req.query.options as unknown as CollectionQueryOptions) ?? defaultCollectionQueryOptions();
+  const collectionAddress = trimLowerCase(req.params.collectionAddress);
+  const chainId = req.params.chainId;
+  const data = await getCollectionByAddress(chainId, collectionAddress, queryOptions);
+  res.send(data);
+});
+
+app.get('/collections/:chainId/:collectionAddress/nfts', async (req: Request, res: Response) => {
+  const chainId = req.params.chainId;
+  const collectionAddress = trimLowerCase(req.params.collectionAddress);
+  const query = req.query as unknown as NftsQuery;
+  const data = await getCollectionNfts(chainId, collectionAddress, query);
+  res.send(data);
+});
+
+app.get('/collections/:chainId/:collectionAddress/nfts/:tokenId', async (req: Request, res: Response) => {
+  const nftQuery = req.query as unknown as NftQuery;
+  const chainId = nftQuery.chainId as string;
+  const collectionAddress = trimLowerCase(nftQuery.address);
+  const tokenId = nftQuery.tokenId;
+  const collection = await getCollectionByAddress(chainId, collectionAddress, defaultCollectionQueryOptions());
+
+  if (collection) {
+    const collectionDocId = getCollectionDocId({
+      collectionAddress: collection.address,
+      chainId: collection.chainId
+    });
+
+    if (collection?.state?.create?.step !== CreationFlow.Complete || !collectionDocId) {
+      return undefined;
+    }
+
+    const nfts = await getNftsFromInfinityFirestore([
+      { address: collection.address, chainId: collection.chainId, tokenId: nftQuery.tokenId }
+    ]);
+
+    const nft = nfts?.[0];
+    res.send(nft);
+  }
+  res.sendStatus(404);
+});
 
 // ################################# User authenticated read endpoints #################################
 
-app.get('/u/:user/nfts', async (req: Request, res: Response) => {});
+app.get('/u/:user/nfts', async (req: Request, res: Response) => {
+  const user = trimLowerCase(req.params.user);
+  const query = req.query as unknown as UserNftsQuery;
+  const chainId = (req.query.chainId as string) ?? '1';
+
+  const nfts = await getUserNfts(user, chainId, query);
+
+  const externalNfts = await isCollectionSupported(nfts.data);
+
+  const resp: ExternalNftArray = {
+    ...nfts,
+    data: externalNfts
+  };
+  res.send(resp);
+});
 
 app.get('/u/:user/reveals', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
@@ -100,6 +240,7 @@ app.get('/u/:user/reveals', async (req: Request, res: Response) => {
 // ========================================= POST REQUESTS =========================================
 
 // ########################### Endpoint that receives webhook events from Alchemy ###########################
+
 app.post('/webhooks/alchemy/padw', (req: Request, res: Response) => {
   console.log('padw webhook body', JSON.stringify(req.body));
   try {
@@ -273,6 +414,139 @@ app.post('/u/:user/rankVisibility', async (req: Request, res: Response) => {
 });
 
 // ============================================ HELPER FUNCTIONS ============================================
+
+async function getUserNfts(
+  userAddress: string,
+  chainId: string,
+  query: Pick<UserNftsQuery, 'collectionAddresses' | 'cursor' | 'limit'>
+): Promise<NftArray> {
+  type Cursor = { pageKey?: string; startAtToken?: string };
+  const cursor = decodeCursorToObject<Cursor>(query.cursor);
+  const getPage = async (
+    pageKey: string,
+    startAtToken?: string
+  ): Promise<{ pageKey: string; nfts: Nft[]; hasNextPage: boolean }> => {
+    const response = await getUserNftsFromAlchemy(userAddress, chainId, pageKey, query.collectionAddresses);
+    const nextPageKey = response?.pageKey ?? '';
+    let nfts = response?.ownedNfts ?? [];
+
+    if (startAtToken) {
+      const indexToStartAt = nfts.findIndex(
+        (item: any) => BigNumber.from(item.id.tokenId).toString() === cursor.startAtToken
+      );
+      nfts = nfts.slice(indexToStartAt);
+    }
+
+    const nftsToTransform = nfts.map((item: any) => ({ alchemyNft: item, chainId }));
+    const results = await transformAlchemyNftToPixelScoreNft(nftsToTransform);
+    const validNfts = results.filter((item: any) => !!item) as Nft[];
+
+    return { pageKey: nextPageKey, nfts: validNfts, hasNextPage: !!nextPageKey };
+  };
+
+  const limit = query.limit + 1; // +1 to check if there is a next page
+  let nfts: Nft[] = [];
+  let alchemyHasNextPage = true;
+  let pageKey = '';
+  let nextPageKey = cursor?.pageKey ?? '';
+  let pageNumber = 0;
+  while (nfts.length < limit && alchemyHasNextPage) {
+    pageKey = nextPageKey;
+    const startAtToken = pageNumber === 0 && cursor.startAtToken ? cursor.startAtToken : undefined;
+    const response = await getPage(pageKey, startAtToken);
+    nfts = [...nfts, ...response.nfts];
+    alchemyHasNextPage = response.hasNextPage;
+    nextPageKey = response.pageKey;
+    pageNumber += 1;
+  }
+
+  const continueFromCurrentPage = nfts.length > query.limit;
+  const hasNextPage = continueFromCurrentPage || alchemyHasNextPage;
+  const nftsToReturn = nfts.slice(0, query.limit);
+  const nftToStartAt = nfts?.[query.limit]?.tokenId;
+
+  const updatedCursor = encodeCursor({
+    pageKey: continueFromCurrentPage ? pageKey : nextPageKey,
+    startAtToken: nftToStartAt
+  });
+
+  return {
+    data: nftsToReturn,
+    cursor: updatedCursor,
+    hasNextPage
+  };
+}
+
+async function getCollectionNfts(chainId: string, collectionAddress: string, query: NftsQuery): Promise<NftArray> {
+  type Cursor = Record<NftsOrderBy, string | number>;
+  const collectionDocId = getCollectionDocId({ chainId, collectionAddress });
+  const nftsCollection = infinityDb
+    .collection(firestoreConstants.COLLECTIONS_COLL)
+    .doc(collectionDocId)
+    .collection(firestoreConstants.COLLECTION_NFTS_COLL);
+  const decodedCursor = decodeCursorToObject<Cursor>(query.cursor);
+
+  let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = nftsCollection;
+
+  if (query.traitTypes) {
+    const traitTypes = query.traitTypes ?? [];
+    const traitTypesValues = query?.traitValues?.map((item) => item.split('|')) ?? [];
+
+    const traits: object[] = [];
+    for (let index = 0; index < traitTypes.length; index++) {
+      const traitType = traitTypes[index];
+      const traitValues = traitTypesValues[index];
+      for (const traitValue of traitValues) {
+        if (traitValue) {
+          const traitTypeObj = traitType ? { trait_type: traitType } : {};
+          traits.push({
+            value: traitValue,
+            ...traitTypeObj
+          });
+        }
+      }
+    }
+    if (traits.length > 0) {
+      nftsQuery = nftsQuery.where('metadata.attributes', 'array-contains-any', traits);
+    }
+  }
+
+  let orderBy: string = query.orderBy;
+  nftsQuery = nftsQuery.orderBy(orderBy, query.orderDirection);
+
+  if (decodedCursor?.[query.orderBy]) {
+    nftsQuery = nftsQuery.startAfter(decodedCursor[query.orderBy]);
+  }
+
+  nftsQuery = nftsQuery.limit(query.limit + 1); // +1 to check if there are more events
+
+  const results = await nftsQuery.get();
+  const data = results.docs.map((item) => item.data() as Nft);
+
+  const hasNextPage = data.length > query.limit;
+  if (hasNextPage) {
+    data.pop();
+  }
+
+  const cursor: Cursor = {} as any;
+  const lastItem = data[data.length - 1];
+  for (const key of Object.values(NftsOrderBy) as NftsOrderBy[]) {
+    switch (key) {
+      case NftsOrderBy.TokenId:
+        if (lastItem?.[key]) {
+          cursor[key] = lastItem[key];
+        }
+        break;
+    }
+  }
+  const encodedCursor = encodeCursor(cursor);
+
+  return {
+    data,
+    cursor: encodedCursor,
+    hasNextPage
+  };
+}
 
 async function updatePendingTxn(
   user: string,
@@ -455,4 +729,10 @@ function alchemyNetworkToChainId(network: string) {
     default:
       return '0';
   }
+}
+
+function defaultCollectionQueryOptions(): CollectionQueryOptions {
+  return {
+    limitToCompleteCollections: true
+  };
 }

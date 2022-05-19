@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "baseUrl": "./src",
-    "target": "es5" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
+    "target": "es2017" /* Set the JavaScript language version for emitted JavaScript and include compatible library declarations. */,
     "module": "commonjs" /* Specify what module code is generated. */ /* Allow accessing UMD globals from modules. */,
     "resolveJsonModule": true /* Enable importing .json files */ /* Only output d.ts files and not JavaScript files. */,
     "sourceMap": false /* Create source map files for emitted JavaScript files. */ /* Specify a file that bundles all outputs into one JavaScript file. If `declaration` is true, also designates a file that bundles all .d.ts output. */,

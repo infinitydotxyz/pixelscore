@@ -63,3 +63,53 @@ export function getDocIdHash({
   const data = chainId.trim() + '::' + trimLowerCase(collectionAddress) + '::' + tokenId.trim();
   return createHash('sha256').update(data).digest('hex').trim().toLowerCase();
 }
+
+/**
+ * Encodes a plaintext cursor.
+ * @param cursor plaintext cursor
+ * @returns base64 encoded cursor
+ */
+export function encodeCursor(cursor: string | number | Object) {
+  if (typeof cursor == 'object') {
+    cursor = JSON.stringify(cursor);
+  }
+
+  return base64Encode(cursor.toString());
+}
+
+/**
+ * Decodes a base64 encoded cursor.
+ * @param encoded base64 encoded cursor
+ * @returns plaintext
+ */
+export function decodeCursor(encoded = ''): string {
+  return base64Decode(encoded);
+}
+
+/**
+ * Decodes a base64 encoded JSON cursor to an object.
+ * @param encoded
+ * @returns
+ */
+export function decodeCursorToObject<T>(encoded = ''): T {
+  try {
+    const decoded = decodeCursor(encoded);
+    return JSON.parse(decoded);
+  } catch (err: any) {
+    return {} as T;
+  }
+}
+
+/**
+ * Decodes a base64 encoded cursor containing a number to a number.
+ * @param encoded
+ * @returns
+ */
+export function decodeCursorToNumber(encoded = '') {
+  const decoded = decodeCursor(encoded);
+  return parseInt(decoded, 10);
+}
+
+export const base64Encode = (data: string) => Buffer.from(data).toString('base64');
+
+export const base64Decode = (data?: string) => Buffer.from(data ?? '', 'base64').toString();
