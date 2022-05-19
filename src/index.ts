@@ -54,6 +54,18 @@ app.use('/u/*', authenticateUser);
 
 // ========================================= GET REQUESTS =========================================
 
+// ################################# Public endpoints #################################
+
+app.get('/collections/:chainId/:collectionAddress', async (req: Request, res: Response) => {});
+
+app.get('/collections/:chainId/:collectionAddress/nfts', async (req: Request, res: Response) => {});
+
+app.get('/collections/search', async (req: Request, res: Response) => {});
+
+// ################################# User authenticated read endpoints #################################
+
+app.get('/u/:user/nfts', async (req: Request, res: Response) => {});
+
 app.get('/u/:user/reveals', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
   console.log('Fetching reveals for user', user);
@@ -87,7 +99,7 @@ app.get('/u/:user/reveals', async (req: Request, res: Response) => {
 
 // ========================================= POST REQUESTS =========================================
 
-// endpoint that receives webhook events from Alchemy
+// ########################### Endpoint that receives webhook events from Alchemy ###########################
 app.post('/webhooks/alchemy/padw', (req: Request, res: Response) => {
   console.log('padw webhook body', JSON.stringify(req.body));
   try {
@@ -125,7 +137,8 @@ app.post('/webhooks/alchemy/padw', (req: Request, res: Response) => {
   }
 });
 
-// user action endpoints
+// ################################# User authenticated write endpoints #################################
+
 app.post('/u/:user/reveals', (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
   console.log('Saving reveals for user', user);
