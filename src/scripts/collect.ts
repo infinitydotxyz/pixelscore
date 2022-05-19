@@ -7,7 +7,7 @@ import path from 'path';
 import { CollectionInfo, TokenInfo } from '../types/main';
 import { COLLECTIONS_COLL, NFTS_SUB_COLL, RANKINGS_COLL } from '../utils/constants';
 import { infinityDb, pixelScoreDb } from '../utils/firestore';
-import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
+import FirestoreBatchHandler from '../utils/FirestoreBatchHandler';
 import MnemonicClient, { MnemonicContract } from '../utils/mnemonic';
 import OpenSeaClient from '../utils/opensea';
 
