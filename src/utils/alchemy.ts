@@ -1,4 +1,4 @@
-import { ChainId, TokenStandard } from '@infinityxyz/lib/types/core';
+import { TokenStandard } from '@infinityxyz/lib/types/core';
 import axios, { AxiosInstance } from 'axios';
 import { BigNumber } from 'ethers';
 import { normalize } from 'path';
@@ -14,7 +14,7 @@ export async function getUserNftsFromAlchemy(
   cursor: string,
   contractAddresses?: string[]
 ) {
-  const url = getBaseUrl(chainId, '/getNFTs');
+  const url = getBaseUrl(chainId);
   try {
     const response = await client.get(url.toString(), {
       params: {
@@ -91,7 +91,7 @@ export async function transformAlchemyNftToPixelScoreNft(
   });
 }
 
-function getBaseUrl(chainId: string, path: string) {
+function getBaseUrl(chainId: string) {
   switch (chainId) {
     case '1':
       return new URL(normalize(process.env.alchemyJsonRpcEthMainnet ?? ''));

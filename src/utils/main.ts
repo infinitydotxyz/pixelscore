@@ -69,8 +69,8 @@ export function getDocIdHash({
  * @param cursor plaintext cursor
  * @returns base64 encoded cursor
  */
-export function encodeCursor(cursor: string | number | Object) {
-  if (typeof cursor == 'object') {
+export function encodeCursor(cursor: string | number | object) {
+  if (typeof cursor === 'object') {
     cursor = JSON.stringify(cursor);
   }
 

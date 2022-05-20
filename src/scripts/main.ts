@@ -2,10 +2,9 @@ import fbAdmin from 'firebase-admin';
 import * as stream from 'stream';
 import { promisify } from 'util';
 import axios from 'axios';
-import { createWriteStream, mkdirSync } from 'fs';
+import { createWriteStream, existsSync, readdirSync, mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
-import fs from 'fs';
-import { QuerySnapshot, DocumentData, QueryDocumentSnapshot } from '@google-cloud/firestore';
+import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
 import { execSync, exec } from 'child_process';
 
 import serviceAccount from '../../creds/nftc-infinity-firebase-creds.json';
@@ -15,25 +14,25 @@ fbAdmin.initializeApp({
 });
 
 const db = fbAdmin.firestore();
-const bucket = fbAdmin.storage().bucket();
+// const bucket = fbAdmin.storage().bucket();
 const finished = promisify(stream.finished);
 const DATA_DIR = 'data';
 const IMAGES_DIR = 'resized';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE_NAME = 'metadata.csv';
 
-let origRetries = 0;
-interface PixelScore {
-  pixelScore: number;
-}
+// const origRetries = 0;
+// interface PixelScore {
+//   pixelScore: number;
+// }
 
 // not used
-async function saveScore(chainId: string, collection: string, tokenId: string, score: PixelScore) {
-  const tokenDoc = db.collection('collections').doc(`${chainId}:${collection}`).collection('nfts').doc(tokenId);
-  tokenDoc.set(score, { merge: true }).catch((err) => {
-    console.error('Error saving pixel score for', chainId, collection, tokenId, err);
-  });
-}
+// async function saveScore(chainId: string, collection: string, tokenId: string, score: PixelScore) {
+//   const tokenDoc = db.collection('collections').doc(`${chainId}:${collection}`).collection('nfts').doc(tokenId);
+//   tokenDoc.set(score, { merge: true }).catch((err) => {
+//     console.error('Error saving pixel score for', chainId, collection, tokenId, err);
+//   });
+// }
 
 async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number) {
   for (const coll of colls.docs) {
@@ -53,7 +52,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   // const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
   // check if collection is already downloaded to local file system
   // const collectionDir = path.join(__dirname, DATA_DIR, address);
-  // if (retries === origRetries && fs.existsSync(collectionDir)) {
+  // if (retries === origRetries && existsSync(collectionDir)) {
   //   console.log('Collection', address, 'already downloaded. Skipping for now');
   //   return;
   // }
@@ -67,7 +66,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   console.log(
     `============================== Fetching tokens from firestore for ${address} =================================`
   );
-  let tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
+  const tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
   const numTokens = tokens.size;
 
   // fetch metadata
@@ -96,7 +95,7 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
     lines += `${data.tokenId},${data.rarityScore},${data.rarityRank},${data.image?.url}\n`;
   });
   // write file
-  fs.writeFileSync(metadataFile, lines);
+  writeFileSync(metadataFile, lines);
   console.log('============================== Metadata written successfully =================================');
 }
 
@@ -121,7 +120,7 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
     }
     const resizedImageLocalFile = path.join(resizedImagesDir, tokenId);
     // check if file already exists
-    if (!fs.existsSync(resizedImageLocalFile)) {
+    if (!existsSync(resizedImageLocalFile)) {
       if (url.indexOf('lh3') > 0) {
         const url224 = url + '=s224';
         // console.log('Downloading', url);
@@ -135,7 +134,7 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
             // mogrify
             // console.log('Mogrifying image', url, collection, tokenId);
             const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
-            exec(cmd, (err, stdout, stderr) => {
+            exec(cmd, (err) => {
               if (err) {
                 console.error('Error mogrifying', cmd, err);
               }
@@ -174,7 +173,7 @@ async function validate(
 ): Promise<boolean> {
   let done = false;
   console.log('============================== Validating =================================');
-  const numImages = fs.readdirSync(imagesDir).length;
+  const numImages = readdirSync(imagesDir).length;
   const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
   const numLines = parseInt(execSync(`cat ${metadataFile} | wc -l`).toString().trim());
   // check if num images downloaded is equal to numtokens
@@ -225,12 +224,10 @@ async function main() {
     retryAfter = 30;
   }
 
-  origRetries = retries;
-
   let chainId, address;
-  if (process.argv.length == 4) {
+  if (process.argv.length === 4) {
     process.exit(1);
-  } else if (process.argv.length == 6) {
+  } else if (process.argv.length === 6) {
     chainId = process.argv[4];
     address = process.argv[5].trim().toLowerCase();
     await run(chainId, address, retries, retryAfter);

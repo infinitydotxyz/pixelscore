@@ -55,7 +55,7 @@ export default class OpenSeaClient {
        */
       throwHttpErrors: false,
       cache: false,
-      timeout: 20_000
+      timeout: { request: 20_000 }
     });
 
     this.clientNoApiKey = got.extend({
@@ -65,7 +65,7 @@ export default class OpenSeaClient {
        */
       throwHttpErrors: false,
       cache: false,
-      timeout: 20_000
+      timeout: { request: 20_000 }
     });
   }
 

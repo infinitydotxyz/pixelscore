@@ -1,4 +1,4 @@
-import { ChainId, Collection, CreationFlow } from '@infinityxyz/lib/types/core';
+import { CreationFlow } from '@infinityxyz/lib/types/core';
 import {
   firestoreConstants,
   getCollectionDocId,
@@ -40,12 +40,7 @@ import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { authenticateUser, decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
 import { BigNumber } from 'ethers';
 import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from './utils/alchemy';
-import {
-  getCollectionByAddress,
-  getCollectionsByAddress,
-  getNftsFromInfinityFirestore,
-  isCollectionSupported
-} from './utils/infinity';
+import { getCollectionByAddress, getNftsFromInfinityFirestore, isCollectionSupported } from './utils/infinity';
 
 dotenv.config();
 
@@ -56,12 +51,12 @@ app.use(express.json());
 export const localHost = /http:\/\/localhost:\d+/;
 const whitelist = [localHost];
 const corsOptions: cors.CorsOptions = {
-  origin: (origin: string | undefined, callback: Function) => {
-    const result = whitelist.filter((regEx, index) => {
+  origin: (origin, callback) => {
+    const result = whitelist.filter((regEx) => {
       return origin?.match(regEx);
     });
 
-    let originIsWhitelisted = result.length > 0;
+    const originIsWhitelisted = result.length > 0;
 
     callback(originIsWhitelisted ? null : Error('Bad Request'), originIsWhitelisted);
   }
@@ -75,7 +70,7 @@ app.listen(port, () => {
 
 const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 
-app.use('/u/*', authenticateUser);
+app.use('/u/:user/*', authenticateUser);
 
 // ========================================= GET REQUESTS =========================================
 
@@ -170,7 +165,6 @@ app.get('/collections/:chainId/:collectionAddress/nfts/:tokenId', async (req: Re
   const nftQuery = req.query as unknown as NftQuery;
   const chainId = nftQuery.chainId as string;
   const collectionAddress = trimLowerCase(nftQuery.address);
-  const tokenId = nftQuery.tokenId;
   const collection = await getCollectionByAddress(chainId, collectionAddress, defaultCollectionQueryOptions());
 
   if (collection) {
@@ -516,7 +510,7 @@ async function getCollectionNfts(chainId: string, collectionAddress: string, que
     }
   }
 
-  let orderBy: string = query.orderBy;
+  const orderBy: string = query.orderBy;
   nftsQuery = nftsQuery.orderBy(orderBy, query.orderDirection);
 
   if (decodedCursor?.[query.orderBy]) {
@@ -561,7 +555,7 @@ async function updatePendingTxn(
 ) {
   try {
     const provider = getProvider(chainId);
-    if (provider == null) {
+    if (provider === null) {
       console.error('Not waiting for txn since provider is null');
     } else {
       const receipt = await provider.waitForTransaction(txnHash, 1);

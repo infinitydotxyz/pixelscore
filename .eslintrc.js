@@ -28,7 +28,6 @@ module.exports = {
     // fix the any types at some point
     '@typescript-eslint/no-explicit-any': 'off',
 
-    'node/no-unsupported-features/es-syntax': ['error', { ignores: ['modules'] }],
     'no-duplicate-imports': 'error',
     '@typescript-eslint/switch-exhaustiveness-check': 'warn'
   },

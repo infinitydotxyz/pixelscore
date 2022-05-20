@@ -1,12 +1,7 @@
 import fbAdmin from 'firebase-admin';
-import * as stream from 'stream';
-import { promisify } from 'util';
-import axios from 'axios';
-import { createWriteStream, mkdirSync } from 'fs';
+import { mkdirSync, writeFileSync, existsSync } from 'fs';
 import path from 'path';
-import fs from 'fs';
-import { QuerySnapshot, DocumentData, QueryDocumentSnapshot } from '@google-cloud/firestore';
-import { execSync } from 'child_process';
+import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
 
 import serviceAccount from '../../creds/nftc-infinity-firebase-creds.json';
 fbAdmin.initializeApp({
@@ -33,7 +28,7 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
     lines += `${data.tokenId},${data.rarityScore},${data.rarityRank},${data.image?.url}\n`;
   });
   // write file
-  fs.writeFileSync(metadataFile, lines);
+  writeFileSync(metadataFile, lines);
   console.log('============================== Metadata written successfully =================================');
 }
 
@@ -48,7 +43,7 @@ async function run(chainId: string, address: string) {
 
   const metadataDir = path.join(__dirname, DATA_DIR, address, METADATA_DIR);
   const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
-  if (fs.existsSync(metadataFile)) {
+  if (existsSync(metadataFile)) {
     console.log('Metadata file already exists for', chainId, address);
     return;
   }
@@ -56,7 +51,7 @@ async function run(chainId: string, address: string) {
   console.log(
     `============================== Fetching tokens from firestore for ${chainId}:${address} =================================`
   );
-  let tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
+  const tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
   fetchMetadata(tokens, metadataDir);
 }
 
@@ -75,7 +70,7 @@ async function main() {
   console.log('Usage for all collections: node fetchMetadata.js');
   console.log('Usage for individual collection: node fetchMetadata.js <chainId> <collectionAddress>');
   let chainId, address;
-  if (process.argv.length == 4) {
+  if (process.argv.length === 4) {
     chainId = process.argv[2];
     address = process.argv[3].trim().toLowerCase();
     await run(chainId, address);
