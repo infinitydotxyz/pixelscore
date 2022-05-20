@@ -1,8 +1,10 @@
 import fbAdmin from 'firebase-admin';
 import {
-  default as infinityServiceAccount,
   default as pixelScoreServiceAccount
 } from '../../creds/pixelscore-firebase-creds.json';
+import {
+  default as infinityServiceAccount
+} from '../../creds/nftc-infinity-firebase-creds.json';
 
 export const fsAdminPixelScore = fbAdmin.initializeApp(
   {

@@ -7,9 +7,9 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
+      "name": "Launch Pixelscore",
       "skipFiles": ["<node_internals>/**"],
-      "program": "${workspaceFolder}/src/scripts/100m.ts",
+      "program": "${workspaceFolder}/src/index.ts",
       "preLaunchTask": "tsc: build - tsconfig.json",
       "outFiles": ["${workspaceFolder}/**/*.js"]
     },
