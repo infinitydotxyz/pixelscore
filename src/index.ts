@@ -541,9 +541,7 @@ async function getCollectionNfts(chainId: string, collectionAddress: string, que
   const results = await nftsQuery.get();
   const data = results.docs.map((item) => {
     const nft = item.data() as Nft;
-
     nft.collectionAddress = collectionAddress;
-
     return nft;
   });
 
