@@ -5,28 +5,23 @@ import { StatusCode } from '@infinityxyz/lib/types/core';
 import { AUTH_HEADERS } from './constants';
 import { ethers } from 'ethers';
 
-export function authenticateUser(req: Request<{ user: string }>, res: Response, next: NextFunction) {
+export function isUserAuthenticated(userId: string, signature: string, message: string): boolean {
   // Return true;
-  const userId = trimLowerCase(req.params.user);
-  const signature = req.header(AUTH_HEADERS.signature);
-  const message = req.header(AUTH_HEADERS.message);
   if (!signature || !message) {
-    res.sendStatus(StatusCode.Unauthorized);
-    return;
+    return false;
   }
   try {
     // Verify signature
     const sign = JSON.parse(signature);
     const actualAddress = ethers.utils.verifyMessage(message, sign).toLowerCase();
     if (actualAddress === userId) {
-      next();
-      return;
+      return true;
     }
   } catch (err: any) {
     console.error(`Cannot authenticate user ${userId}`);
     console.error(err);
   }
-  res.sendStatus(StatusCode.Unauthorized);
+  return false;
 }
 
 export async function sleep(duration: number): Promise<void> {
