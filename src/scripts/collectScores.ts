@@ -23,13 +23,8 @@ async function main() {
 
 async function processAllSplits(dirPath: string) {
   const splits = fs.readdirSync(dirPath).filter((file) => file.startsWith(SPLIT_PREFIX));
-  let i = 0;
   for (const split of splits) {
-    ++i;
     await processOneSplit(dirPath, split);
-    if (i === 2) {
-      return;
-    }
   }
 }
 
