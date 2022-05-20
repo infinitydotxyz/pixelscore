@@ -9,7 +9,9 @@
     "build": "npm run update:lib && rimraf dist && tsc",
     "start": "node dist/src/index.js",
     "update:lib": "npm update @infinityxyz/lib",
-    "deploy": "gcloud app deploy -q --project=pixelscore-9ec2a"
+    "deploy": "gcloud app deploy -q --project=pixelscore-9ec2a",
+    "lint": "eslint --ext=ts .",
+    "lint:fix": "eslint --fix --ext=ts src"
   },
   "author": "",
   "license": "ISC",
@@ -43,6 +45,13 @@
     "concurrently": "^7.2.0",
     "nodemon": "^2.0.16",
     "ts-node": "^10.7.0",
-    "typescript": "^4.6.4"
+    "typescript": "^4.6.4",
+    "eslint": "8.14.0",
+    "@typescript-eslint/eslint-plugin": "5.21.0",
+    "@typescript-eslint/parser": "5.21.0",
+    "eslint-config-prettier": "8.5.0",
+    "prettier": "^2.6.2",
+    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-node": "^11.1.0"
   }
 }
