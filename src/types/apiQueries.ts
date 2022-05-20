@@ -1,4 +1,4 @@
-import { ChainId, OrderDirection } from "@infinityxyz/lib/types/core";
+import { ChainId, OrderDirection } from '@infinityxyz/lib/types/core';
 
 export interface CollectionSearchQuery {
   query?: string;

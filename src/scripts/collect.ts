@@ -1,7 +1,6 @@
 import { BaseCollection } from '@infinityxyz/lib/types/core/Collection';
 import { getSearchFriendlyString, trimLowerCase } from '@infinityxyz/lib/utils';
 import { execSync } from 'child_process';
-import { ethers } from 'ethers';
 import fs from 'fs';
 import path from 'path';
 import { CollectionInfo, TokenInfo } from '../types/main';
@@ -27,22 +26,23 @@ async function main() {
   await processOneCollection(dirPath, '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d');
 }
 
-async function processCollections(dirPath: string) {
-  const dirs = fs.readdirSync(dirPath).filter((file) => fs.statSync(path.join(dirPath, file)).isDirectory());
-  for (const dir of dirs) {
-    if (dir.startsWith('0x')) {
-      const collection = trimLowerCase(dir);
-      const collectionCompleteFile = path.join(dirPath, dir, COLLECTION_COMPLETE_FILE);
-      if (!ethers.utils.isAddress(collection)) {
-        console.error('Invalid collection:', collection);
-      } else if (fs.existsSync(collectionCompleteFile)) {
-        console.log('Collection already processed:', collection);
-      } else {
-        await processOneCollection(dirPath, collection);
-      }
-    }
-  }
-}
+// not used?
+// async function processCollections(dirPath: string) {
+//   const dirs = fs.readdirSync(dirPath).filter((file) => fs.statSync(path.join(dirPath, file)).isDirectory());
+//   for (const dir of dirs) {
+//     if (dir.startsWith('0x')) {
+//       const collection = trimLowerCase(dir);
+//       const collectionCompleteFile = path.join(dirPath, dir, COLLECTION_COMPLETE_FILE);
+//       if (!ethers.utils.isAddress(collection)) {
+//         console.error('Invalid collection:', collection);
+//       } else if (fs.existsSync(collectionCompleteFile)) {
+//         console.log('Collection already processed:', collection);
+//       } else {
+//         await processOneCollection(dirPath, collection);
+//       }
+//     }
+//   }
+// }
 
 async function processOneCollection(dirPath: string, collection: string) {
   try {

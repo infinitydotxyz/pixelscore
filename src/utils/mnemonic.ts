@@ -27,7 +27,7 @@ export default class MnemonicClient {
        */
       throwHttpErrors: false,
       cache: false,
-      timeout: 10_000
+      timeout: { request: 10_000 }
     });
   }
 

@@ -1,8 +1,8 @@
-import { Collection, CreationFlow } from "@infinityxyz/lib/types/core";
-import { firestoreConstants, getCollectionDocId } from "@infinityxyz/lib/utils";
-import { CollectionQueryOptions } from "types/apiQueries";
-import { ExternalNft, Nft } from "types/firestore";
-import { infinityDb } from "./firestore";
+import { Collection, CreationFlow } from '@infinityxyz/lib/types/core';
+import { firestoreConstants, getCollectionDocId } from '@infinityxyz/lib/utils';
+import { CollectionQueryOptions } from 'types/apiQueries';
+import { ExternalNft, Nft } from 'types/firestore';
+import { infinityDb } from './firestore';
 
 export async function getNftsFromInfinityFirestore(nfts: { address: string; chainId: string; tokenId: string }[]) {
   const refs = nfts.map((item) => {
@@ -52,61 +52,59 @@ export async function getCollectionByAddress(
 }
 
 export async function getCollectionsByAddress(collections: { address: string; chainId: string }[]) {
-    const docIds = [
-      ...new Set(
-        collections.map((collection) => {
-          try {
-            return getCollectionDocId({ collectionAddress: collection.address, chainId: collection.chainId });
-          } catch (err) {
-            return null;
-          }
-        })
-      )
-    ].filter((item) => item !== null) as string[];
+  const docIds = [
+    ...new Set(
+      collections.map((collection) => {
+        try {
+          return getCollectionDocId({ collectionAddress: collection.address, chainId: collection.chainId });
+        } catch (err) {
+          return null;
+        }
+      })
+    )
+  ].filter((item) => item !== null) as string[];
 
-    const collectionRefs = docIds.map((docId) =>
-      infinityDb.collection(firestoreConstants.COLLECTIONS_COLL).doc(docId)
-    );
+  const collectionRefs = docIds.map((docId) => infinityDb.collection(firestoreConstants.COLLECTIONS_COLL).doc(docId));
 
-    const getCollection = (coll: { address: string; chainId: string }) => {
-      try {
-        const collection =
-          collectionMap[getCollectionDocId({ collectionAddress: coll.address, chainId: coll.chainId })] ?? {};
-        return collection;
-      } catch (err) {
-        return {};
-      }
-    };
-
-    if (collectionRefs.length === 0) {
-      return { getCollection };
+  const getCollection = (coll: { address: string; chainId: string }) => {
+    try {
+      const collection =
+        collectionMap[getCollectionDocId({ collectionAddress: coll.address, chainId: coll.chainId })] ?? {};
+      return collection;
+    } catch (err) {
+      return {};
     }
+  };
 
-    const collectionsSnap = await infinityDb.getAll(...collectionRefs);
-
-    const collectionMap: { [id: string]: Partial<Collection> } = {};
-    collectionsSnap.forEach((item, index) => {
-      const docId = docIds[index];
-      collectionMap[docId] = (item.data() ?? {}) as Partial<Collection>;
-    });
-
+  if (collectionRefs.length === 0) {
     return { getCollection };
   }
 
- export async function isCollectionSupported(nfts: Nft[]) {
-    const { getCollection } = await getCollectionsByAddress(
-      nfts.map((nft) => ({ address: nft.collectionAddress ?? '', chainId: nft.chainId }))
-    );
+  const collectionsSnap = await infinityDb.getAll(...collectionRefs);
 
-    const externalNfts: ExternalNft[] = nfts.map((nft) => {
-      const collection = getCollection({ address: nft.collectionAddress ?? '', chainId: nft.chainId });
-      const isSupported = collection?.state?.create?.step === CreationFlow.Complete;
-      const externalNft: ExternalNft = {
-        ...nft,
-        isSupported
-      };
-      return externalNft;
-    });
+  const collectionMap: { [id: string]: Partial<Collection> } = {};
+  collectionsSnap.forEach((item, index) => {
+    const docId = docIds[index];
+    collectionMap[docId] = (item.data() ?? {}) as Partial<Collection>;
+  });
 
-    return externalNfts;
-  }
+  return { getCollection };
+}
+
+export async function isCollectionSupported(nfts: Nft[]) {
+  const { getCollection } = await getCollectionsByAddress(
+    nfts.map((nft) => ({ address: nft.collectionAddress ?? '', chainId: nft.chainId }))
+  );
+
+  const externalNfts: ExternalNft[] = nfts.map((nft) => {
+    const collection = getCollection({ address: nft.collectionAddress ?? '', chainId: nft.chainId });
+    const isSupported = collection?.state?.create?.step === CreationFlow.Complete;
+    const externalNft: ExternalNft = {
+      ...nft,
+      isSupported
+    };
+    return externalNft;
+  });
+
+  return externalNfts;
+}

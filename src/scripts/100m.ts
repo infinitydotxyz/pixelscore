@@ -1,9 +1,8 @@
 import * as stream from 'stream';
 import { promisify } from 'util';
 import axios from 'axios';
-import { createWriteStream, mkdirSync } from 'fs';
+import { createWriteStream, readFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import path from 'path';
-import fs from 'fs';
 import { exec } from 'child_process';
 import MnemonicClient, { Token } from '../utils/mnemonic';
 import OpenSeaClient from '../utils/opensea';
@@ -11,13 +10,11 @@ import MetadataClient from '../utils/metadata';
 
 const finished = promisify(stream.finished);
 const DATA_DIR = 'data';
-const ERC1155_DATA_DIR = 'data_erc1155';
-const MNEMONIC_DATA_DIR = 'mnemonic_data';
+// const ERC1155_DATA_DIR = 'data_erc1155';
+// const MNEMONIC_DATA_DIR = 'mnemonic_data';
 const IMAGES_DIR = 'resized';
-const METADATA_DIR = 'metadata';
-const METADATA_FILE_NAME = 'metadata.csv';
-
-let origRetries = 0;
+// const METADATA_DIR = 'metadata';
+// const METADATA_FILE_NAME = 'metadata.csv';
 
 const mnemonic = new MnemonicClient();
 const opensea = new OpenSeaClient();
@@ -32,11 +29,11 @@ async function fetchOSImage(url: string, collection: string, tokenId: string, re
   }
   // write url to file
   const urlFile = path.join(resizedImagesDir, tokenId + '.url');
-  fs.writeFileSync(urlFile, `${tokenId},${url}`);
+  writeFileSync(urlFile, `${tokenId},${url}`);
 
   // check if image file already exists
   const resizedImageLocalFile = path.join(resizedImagesDir, tokenId);
-  if (!fs.existsSync(resizedImageLocalFile)) {
+  if (!existsSync(resizedImageLocalFile)) {
     if (url.indexOf('lh3') > 0) {
       const url224 = url + '=s224';
       // console.log('Downloading', url);
@@ -50,7 +47,7 @@ async function fetchOSImage(url: string, collection: string, tokenId: string, re
           // mogrify
           // console.log('Mogrifying image', url, collection, tokenId);
           const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
-          exec(cmd, (err, stdout, stderr) => {
+          exec(cmd, (err) => {
             if (err) {
               console.error('Error mogrifying', resizedImageLocalFile, err);
             }
@@ -70,11 +67,11 @@ async function fetchOriginalImage(url: string, collection: string, tokenId: stri
   }
   // write url to file
   const urlFile = path.join(resizedImagesDir, tokenId + '.url');
-  fs.writeFileSync(urlFile, `${tokenId},${url}`);
+  writeFileSync(urlFile, `${tokenId},${url}`);
 
   // check if image file already exists
   const resizedImageLocalFile = path.join(resizedImagesDir, tokenId);
-  if (!fs.existsSync(resizedImageLocalFile)) {
+  if (!existsSync(resizedImageLocalFile)) {
     if (url.startsWith('ipfs')) {
       metadataClient
         .get(url, 0)
@@ -87,7 +84,7 @@ async function fetchOriginalImage(url: string, collection: string, tokenId: stri
               // mogrify
               // console.log('Mogrifying image', url, collection, tokenId);
               const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
-              exec(cmd, (err, stdout, stderr) => {
+              exec(cmd, (err) => {
                 if (err) {
                   console.error('Error mogrifying', resizedImageLocalFile, err);
                 }
@@ -102,7 +99,7 @@ async function fetchOriginalImage(url: string, collection: string, tokenId: stri
           // mogrify
           // console.log('Mogrifying image', url, collection, tokenId);
           const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
-          exec(cmd, (err, stdout, stderr) => {
+          exec(cmd, (err) => {
             if (err) {
               console.error('Error mogrifying', resizedImageLocalFile, err);
             }
@@ -133,15 +130,15 @@ async function buildCollection(address: string, tokensOffset = 0) {
   try {
     console.log(`============================== Building collection ${address} =================================`);
     // check if collection is already downloaded to local file system
-    const collectionDir = path.join(__dirname, DATA_DIR, address);
-    // if (fs.existsSync(collectionDir)) {
+    // const collectionDir = path.join(__dirname, DATA_DIR, address);
+    // if (existsSync(collectionDir)) {
     //   console.log('Collection', address, 'already downloaded. Skipping for now');
     //   return;
     // }
     const tokensOfContractLimit = 50;
     const tokenResponse = await mnemonic.getNFTsOfContract(address, tokensOfContractLimit, tokensOffset);
     const tokens = tokenResponse.tokens;
-    if (tokens.length == 0) {
+    if (tokens.length === 0) {
       console.log('No tokens found for', address);
       return;
     }
@@ -151,7 +148,7 @@ async function buildCollection(address: string, tokensOffset = 0) {
     const imageLessTokens: Token[] = [];
     for (const token of tokens) {
       const resizedImageLocalFile = path.join(resizedImagesDir, token.tokenId);
-      if (!fs.existsSync(resizedImageLocalFile)) {
+      if (!existsSync(resizedImageLocalFile)) {
         imageLessTokens.push(token);
       }
     }
@@ -190,6 +187,8 @@ async function buildCollectionFromMnemonic(address: string, tokens: Token[], res
       await fetchOriginalImage(imageUrl, address, tokenId, resizedImagesDir);
     }
   } catch (err) {
+    // console.log fixes an unnecesary try/catch lint? linter buggy
+    console.log(err);
     throw err;
   }
 }
@@ -235,6 +234,9 @@ async function buildCollectionFromOS(address: string, tokens: Token[], resizedIm
       }
     }
   } catch (err) {
+    // console.log fixes an unnecesary try/catch lint? linter buggy
+    console.log(err);
+
     throw err;
   }
 }
@@ -253,22 +255,20 @@ async function main() {
     retryAfter = 30;
   }
 
-  origRetries = retries;
-
-  let chainId, address;
-  if (process.argv.length == 4) {
+  let address;
+  if (process.argv.length === 4) {
     process.exit(1);
-  } else if (process.argv.length == 6) {
-    chainId = process.argv[4];
+  } else if (process.argv.length === 6) {
+    // chainId = process.argv[4];
     address = process.argv[5].trim().toLowerCase();
     await buildCollection(address, 0);
   } else {
     let limit = 50;
     let offset = 0;
     const offsetFile = path.join(__dirname, 'offset.txt');
-    if (fs.existsSync(offsetFile)) {
-      const offsetAndLimit = fs.readFileSync(offsetFile, 'utf8').split(',');
-      if (offsetAndLimit.length == 2) {
+    if (existsSync(offsetFile)) {
+      const offsetAndLimit = readFileSync(offsetFile, 'utf8').split(',');
+      if (offsetAndLimit.length === 2) {
         offset = parseInt(offsetAndLimit[0]);
         limit = parseInt(offsetAndLimit[1]);
       }
@@ -280,7 +280,7 @@ async function main() {
           `============================== Fetching collections from mnemonic, offset ${offset}, limit ${limit} =================================`
         );
         // write url to file
-        fs.writeFileSync(offsetFile, `${offset},${limit}`);
+        writeFileSync(offsetFile, `${offset},${limit}`);
         const colls = await mnemonic.getERC721Collections(offset, limit);
         // break condition
         if (colls.length < limit) {

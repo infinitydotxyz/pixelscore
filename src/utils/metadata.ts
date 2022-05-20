@@ -2,7 +2,6 @@ import { INFURA_API_KEYS, METADATA_CONCURRENCY } from './constants';
 import got, { Got, Options, Response } from 'got/dist/source';
 import PQueue from 'p-queue';
 // import { detectContentType } from './sniff';
-import { Readable } from 'stream';
 import { randomItem } from './main';
 import NotFoundError from './notFound';
 import { normalize } from 'path';
@@ -76,7 +75,7 @@ export default class MetadataClient {
     });
 
     this.client = got.extend({
-      timeout: 120_000,
+      timeout: { request: 120_000 },
       throwHttpErrors: false,
       retry: {
         limit: 0
@@ -91,7 +90,7 @@ export default class MetadataClient {
             const protocol = url.protocol.toLowerCase();
             const protocolConfig = config.protocols[protocol as Protocol];
             if (typeof protocolConfig.transform === 'function') {
-              protocolConfig.transform(options);
+              protocolConfig.transform(options as Options); // TODO: Adi, not sure why I had to cast this.  remove and see error
             } else if (protocolConfig.transform !== null) {
               throw new Error(`Invalid protocol: ${protocol}`);
             }
@@ -131,7 +130,7 @@ export default class MetadataClient {
         const decodedMetadata = rawBody.toString('ascii');
 
         const res: Pick<Response<string>, 'requestUrl' | 'statusCode' | 'url' | 'body' | 'rawBody'> = {
-          requestUrl: rawUrl,
+          requestUrl: url,
           statusCode: 200,
           url: rawUrl,
           body: decodedMetadata,
@@ -153,7 +152,7 @@ export default class MetadataClient {
       switch (response.statusCode) {
         case 200:
           if (isIpfs(response.requestUrl)) {
-            const path = config.protocols[Protocol.IPFS].ipfsPathFromUrl(url);
+            // const path = config.protocols[Protocol.IPFS].ipfsPathFromUrl(url);
             // const { contentType: ipfsContentType } = await detectContentType(path, Readable.from(response.rawBody));
             // // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
             // const contentType = ipfsContentType || 'text/plain';

@@ -6,7 +6,6 @@ import {
   ReadError,
   RequestError,
   TimeoutError,
-  UnsupportedProtocolError,
   UploadError
 } from 'got';
 
@@ -17,7 +16,6 @@ export type GotError =
   | ParseError
   | UploadError
   | MaxRedirectsError
-  | UnsupportedProtocolError
   | TimeoutError
   | CancelError;
 
@@ -29,13 +27,12 @@ export function isGotError(error: GotError | unknown): boolean {
     error instanceof ParseError ||
     error instanceof UploadError ||
     error instanceof MaxRedirectsError ||
-    error instanceof UnsupportedProtocolError ||
     error instanceof TimeoutError ||
     error instanceof CancelError
   );
 }
 
-const fatal = [CancelError, UnsupportedProtocolError];
+const fatal = [CancelError, RequestError];
 
 export function gotErrorHandler(error: GotError | unknown): { retry: true; delay: number } | { fatal: boolean } {
   if (isGotError(error)) {

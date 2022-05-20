@@ -1,4 +1,4 @@
-import { ChainId, Collection, CreationFlow } from '@infinityxyz/lib/types/core';
+import { CreationFlow } from '@infinityxyz/lib/types/core';
 import {
   firestoreConstants,
   getCollectionDocId,
@@ -40,13 +40,8 @@ import { infinityDb, pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash, isUserAuthenticated } from './utils/main';
 import { BigNumber } from 'ethers';
-import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from 'utils/alchemy';
-import {
-  getCollectionByAddress,
-  getCollectionsByAddress,
-  getNftsFromInfinityFirestore,
-  isCollectionSupported
-} from 'utils/infinity';
+import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from './utils/alchemy';
+import { getCollectionByAddress, getNftsFromInfinityFirestore, isCollectionSupported } from './utils/infinity';
 
 dotenv.config();
 
@@ -57,12 +52,12 @@ app.use(express.json());
 export const localHost = /http:\/\/localhost:\d+/;
 const whitelist = [localHost];
 const corsOptions: cors.CorsOptions = {
-  origin: (origin: string | undefined, callback: Function) => {
-    const result = whitelist.filter((regEx, index) => {
+  origin: (origin, callback) => {
+    const result = whitelist.filter((regEx) => {
       return origin?.match(regEx);
     });
 
-    let originIsWhitelisted = result.length > 0;
+    const originIsWhitelisted = result.length > 0;
 
     callback(originIsWhitelisted ? null : Error('Bad Request'), originIsWhitelisted);
   }
@@ -90,13 +85,17 @@ app.all('/u/*', async (req: Request, res: Response, next: NextFunction) => {
 
 const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 
-
 // ========================================= GET REQUESTS =========================================
 
 // ################################# Public endpoints #################################
 
 app.get('/collections/search', async (req: Request, res: Response) => {
-  const search = req.query as CollectionSearchQuery;
+  // convert query strings to ints
+  const queryParams = Object.assign({}, req.query) as any; // ParamsDictionary
+  queryParams.limit = parseInt(queryParams.limit);
+
+  const search = queryParams as CollectionSearchQuery;
+
   const limit = search.limit ?? DEFAULT_PAGE_LIMIT;
   let firestoreQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = infinityDb.collection(
     firestoreConstants.COLLECTIONS_COLL
@@ -138,11 +137,11 @@ app.get('/collections/search', async (req: Request, res: Response) => {
       address: data.address as string,
       chainId: data.chainId as string,
       slug: data.slug as string,
-      name: data.metadata.name as string,
+      name: data.metadata?.name as string,
       hasBlueCheck: data.hasBlueCheck as boolean,
-      profileImage: data.metadata.profileImage as string,
-      bannerImage: data.metadata.bannerImage as string,
-      description: data.metadata.description as string
+      profileImage: data.metadata?.profileImage as string,
+      bannerImage: data.metadata?.bannerImage as string,
+      description: data.metadata?.description as string
     };
   });
 
@@ -179,7 +178,6 @@ app.get('/collections/:chainId/:collectionAddress/nfts/:tokenId', async (req: Re
   const nftQuery = req.query as unknown as NftQuery;
   const chainId = nftQuery.chainId as string;
   const collectionAddress = trimLowerCase(nftQuery.address);
-  const tokenId = nftQuery.tokenId;
   const collection = await getCollectionByAddress(chainId, collectionAddress, defaultCollectionQueryOptions());
 
   if (collection) {
@@ -525,7 +523,7 @@ async function getCollectionNfts(chainId: string, collectionAddress: string, que
     }
   }
 
-  let orderBy: string = query.orderBy;
+  const orderBy: string = query.orderBy;
   nftsQuery = nftsQuery.orderBy(orderBy, query.orderDirection);
 
   if (decodedCursor?.[query.orderBy]) {
@@ -570,7 +568,7 @@ async function updatePendingTxn(
 ) {
   try {
     const provider = getProvider(chainId);
-    if (provider == null) {
+    if (provider === null) {
       console.error('Not waiting for txn since provider is null');
     } else {
       const receipt = await provider.waitForTransaction(txnHash, 1);
