@@ -17,14 +17,19 @@ const SPLIT_COMPLETE_PREFIX = 'complete_';
 
 async function main() {
   console.log('Collecting scores...');
-  // await processAllSplits(ALL_SCORES_DIR);
-  await processOneSplit(ALL_SCORES_DIR, 'split_000');
+  await processAllSplits(ALL_SCORES_DIR);
+  // await processOneSplit(ALL_SCORES_DIR, 'split_000');
 }
 
 async function processAllSplits(dirPath: string) {
   const splits = fs.readdirSync(dirPath).filter((file) => file.startsWith(SPLIT_PREFIX));
+  let i = 0;
   for (const split of splits) {
+    ++i;
     await processOneSplit(dirPath, split);
+    if (i === 2) {
+      return;
+    }
   }
 }
 
@@ -73,7 +78,7 @@ async function processOneSplit(dirPath: string, split: string) {
           tokenId,
           imageUrl,
           pixelScore: parseFloat(globalPixelScore),
-          pixelRank: parseInt(serialNum),
+          pixelRank: parseInt(serialNum + 1),
           pixelRankBucket: parseInt(globalPixelRankBucket),
           inCollectionPixelRank: parseInt(inCollectionPixelRank)
         };
