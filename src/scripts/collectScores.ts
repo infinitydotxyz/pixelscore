@@ -10,7 +10,7 @@ import { pixelScoreDb } from '../utils/firestore';
 import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
 
 const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
-const ALL_SCORES_DIR = 'all_scores';
+const ALL_SCORES_DIR = '/mnt/disks/additional-disk/all_scores';
 const SPLIT_PREFIX = 'split_';
 const CHAIN_ID = '1';
 const SPLIT_COMPLETE_PREFIX = 'complete_';
