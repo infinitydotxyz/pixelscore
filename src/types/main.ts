@@ -17,7 +17,7 @@ export interface CollectionInfo {
 export interface TokenInfo {
   chainId: string;
   collectionAddress: string;
-  collectionSlug: string;
+  collectionSlug?: string;
   tokenId: string;
   imageUrl: string;
   rarityScore?: number;
@@ -26,6 +26,7 @@ export interface TokenInfo {
   inCollectionPixelRank?: number;
   pixelScore?: number;
   pixelRank?: number;
+  pixelRankBucket?: number;
   pixelRankRevealed?: boolean;
   pixelRankVisible?: boolean;
   pixelRankRevealer?: string;

@@ -1,5 +1,4 @@
 import { Erc721Metadata, RefreshTokenErrorJson, RefreshTokenFlow, TokenStandard } from '@infinityxyz/lib/types/core';
-
 export interface NftArray {
   data: Nft[];
   cursor: string;
