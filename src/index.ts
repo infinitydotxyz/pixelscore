@@ -42,11 +42,21 @@ import { decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash, isUserA
 import { BigNumber } from 'ethers';
 import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from './utils/alchemy';
 import { getCollectionByAddress, getNftsFromInfinityFirestore, isCollectionSupported } from './utils/infinity';
+import { queryParser } from './utils/query-parser';
 
 dotenv.config();
 
 const app: Express = express();
 app.use(express.json());
+
+app.use(
+  queryParser({
+    parseNull: true,
+    parseUndefined: true,
+    parseBoolean: true,
+    parseNumber: true
+  })
+);
 
 // todo: change this
 export const localHost = /http:\/\/localhost:\d+/;
@@ -90,11 +100,7 @@ const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 // ################################# Public endpoints #################################
 
 app.get('/collections/search', async (req: Request, res: Response) => {
-  // convert query strings to ints
-  const queryParams = Object.assign({}, req.query) as any; // ParamsDictionary
-  queryParams.limit = parseInt(queryParams.limit);
-
-  const search = queryParams as CollectionSearchQuery;
+  const search = req.query as CollectionSearchQuery;
 
   const limit = search.limit ?? DEFAULT_PAGE_LIMIT;
   let firestoreQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = infinityDb.collection(
