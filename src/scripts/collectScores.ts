@@ -17,9 +17,8 @@ const SPLIT_COMPLETE_PREFIX = 'complete_';
 
 async function main() {
   console.log('Collecting scores...');
-  const dirPath = path.join(__dirname, ALL_SCORES_DIR);
-  // await processAllSplits(dirPath);
-  await processOneSplit(dirPath, 'split_000');
+  // await processAllSplits(ALL_SCORES_DIR);
+  await processOneSplit(ALL_SCORES_DIR, 'split_000');
 }
 
 async function processAllSplits(dirPath: string) {
