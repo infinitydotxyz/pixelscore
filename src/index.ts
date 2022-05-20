@@ -7,10 +7,9 @@ import {
   jsonString,
   trimLowerCase
 } from '@infinityxyz/lib/utils';
-import cors from 'cors';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
-import express, { Express, NextFunction, Request, Response } from 'express';
+import { Express, Request, Response } from 'express';
 import { ExternalNftArray, Nft, NftArray } from 'types/firestore';
 import { AlchemyAddressActivityWebHook, RevealOrder, TokenInfo, UpdateRankVisibility } from './types/main';
 import {
@@ -25,7 +24,6 @@ import {
   ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL,
   ALCHEMY_WEBHOOK_ASSET_ETH,
   ALCHEMY_WEBHOOK_ETH_MAINNET,
-  AUTH_HEADERS,
   DEFAULT_PAGE_LIMIT,
   getProvider,
   NFTS_SUB_COLL,
@@ -38,60 +36,15 @@ import {
 } from './utils/constants';
 import { infinityDb, pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
-import { decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash, isUserAuthenticated } from './utils/main';
+import { decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
 import { BigNumber } from 'ethers';
 import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from './utils/alchemy';
 import { getCollectionByAddress, getNftsFromInfinityFirestore, isCollectionSupported } from './utils/infinity';
-import { queryParser } from './utils/query-parser';
+import { startServer } from './server';
 
 dotenv.config();
 
-const app: Express = express();
-app.use(express.json());
-
-app.use(
-  queryParser({
-    parseNull: true,
-    parseUndefined: true,
-    parseBoolean: true,
-    parseNumber: true
-  })
-);
-
-// todo: change this
-export const localHost = /http:\/\/localhost:\d+/;
-const whitelist = [localHost];
-const corsOptions: cors.CorsOptions = {
-  origin: (origin, callback) => {
-    const result = whitelist.filter((regEx) => {
-      return origin?.match(regEx);
-    });
-
-    const originIsWhitelisted = result.length > 0;
-
-    callback(originIsWhitelisted ? null : Error('Bad Request'), originIsWhitelisted);
-  }
-};
-app.use(cors(corsOptions));
-
-const port = process.env.PORT ?? 9090;
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
-
-app.all('/u/*', async (req: Request, res: Response, next: NextFunction) => {
-  const userAddress = trimLowerCase(req.params.user);
-  const authorized = isUserAuthenticated(
-    userAddress,
-    req.header(AUTH_HEADERS.signature) ?? '',
-    req.header(AUTH_HEADERS.message) ?? ''
-  );
-  if (authorized) {
-    next();
-  } else {
-    res.status(401).send('Unauthorized');
-  }
-});
+const app: Express = startServer();
 
 const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 
