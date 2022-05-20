@@ -539,7 +539,13 @@ async function getCollectionNfts(chainId: string, collectionAddress: string, que
   nftsQuery = nftsQuery.limit(query.limit + 1); // +1 to check if there are more events
 
   const results = await nftsQuery.get();
-  const data = results.docs.map((item) => item.data() as Nft);
+  const data = results.docs.map((item) => {
+    const nft = item.data() as Nft;
+
+    nft.collectionAddress = collectionAddress;
+
+    return nft;
+  });
 
   const hasNextPage = data.length > query.limit;
   if (hasNextPage) {
