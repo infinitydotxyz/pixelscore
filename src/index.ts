@@ -39,13 +39,13 @@ import { infinityDb, pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { authenticateUser, decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
 import { BigNumber } from 'ethers';
-import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from 'utils/alchemy';
+import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from './utils/alchemy';
 import {
   getCollectionByAddress,
   getCollectionsByAddress,
   getNftsFromInfinityFirestore,
   isCollectionSupported
-} from 'utils/infinity';
+} from './utils/infinity';
 
 dotenv.config();
 
@@ -82,7 +82,12 @@ app.use('/u/*', authenticateUser);
 // ################################# Public endpoints #################################
 
 app.get('/collections/search', async (req: Request, res: Response) => {
-  const search = req.query as CollectionSearchQuery;
+  // convert query strings to ints
+  const queryParams = Object.assign({}, req.query) as any; // ParamsDictionary
+  queryParams.limit = parseInt(queryParams.limit);
+
+  const search = queryParams as CollectionSearchQuery;
+
   const limit = search.limit ?? DEFAULT_PAGE_LIMIT;
   let firestoreQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = infinityDb.collection(
     firestoreConstants.COLLECTIONS_COLL
@@ -124,11 +129,11 @@ app.get('/collections/search', async (req: Request, res: Response) => {
       address: data.address as string,
       chainId: data.chainId as string,
       slug: data.slug as string,
-      name: data.metadata.name as string,
+      name: data.metadata?.name as string,
       hasBlueCheck: data.hasBlueCheck as boolean,
-      profileImage: data.metadata.profileImage as string,
-      bannerImage: data.metadata.bannerImage as string,
-      description: data.metadata.description as string
+      profileImage: data.metadata?.profileImage as string,
+      bannerImage: data.metadata?.bannerImage as string,
+      description: data.metadata?.description as string
     };
   });
 
