@@ -61,7 +61,7 @@ async function run(chainId: string, address: string) {
 }
 
 async function runAFew(colls: QuerySnapshot<DocumentData>) {
-  for(const coll of colls.docs) {
+  for (const coll of colls.docs) {
     const data = coll.data();
     if (!data) {
       console.error('Data is null for collection', coll);
