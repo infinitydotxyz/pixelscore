@@ -3,7 +3,7 @@ import { trimLowerCase } from '@infinityxyz/lib/utils';
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { getDocIdHash } from 'utils/main';
+import { getDocIdHash } from '../utils/main';
 import { TokenInfo } from '../types/main';
 import { RANKINGS_COLL } from '../utils/constants';
 import { pixelScoreDb } from '../utils/firestore';
