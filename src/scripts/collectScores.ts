@@ -78,7 +78,7 @@ async function processOneSplit(dirPath: string, split: string) {
           tokenId,
           imageUrl,
           pixelScore: parseFloat(globalPixelScore),
-          pixelRank: parseInt(serialNum + 1),
+          pixelRank: parseInt(serialNum) + 1,
           pixelRankBucket: parseInt(globalPixelRankBucket),
           inCollectionPixelRank: parseInt(inCollectionPixelRank)
         };
