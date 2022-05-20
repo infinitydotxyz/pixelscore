@@ -1,8 +1,5 @@
 import { trimLowerCase } from '@infinityxyz/lib/utils';
 import { createHash } from 'crypto';
-import { NextFunction, Response, Request } from 'express';
-import { StatusCode } from '@infinityxyz/lib/types/core';
-import { AUTH_HEADERS } from './constants';
 import { ethers } from 'ethers';
 
 export function isUserAuthenticated(userId: string, signature: string, message: string): boolean {
