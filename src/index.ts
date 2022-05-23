@@ -26,9 +26,9 @@ import {
   ALCHEMY_WEBHOOK_ETH_MAINNET,
   DEFAULT_PAGE_LIMIT,
   getProvider,
-  NFTS_SUB_COLL,
   PIXELSCORE_PRICE_PER_ITEM,
   PIXELSCORE_WALLET,
+  RANKINGS_COLL,
   REVEALS_COLL,
   REVEALS_ITEMS_SUB_COLL,
   REVEAL_ITEMS_LIMIT,
@@ -610,7 +610,7 @@ async function getRevealData(
   tokenId: string
 ): Promise<Partial<TokenInfo> | undefined> {
   const rankingInfo = await pixelScoreDb
-    .collectionGroup(NFTS_SUB_COLL)
+    .collection(RANKINGS_COLL)
     .where('chainId', '==', chainId)
     .where('collectionAddress', '==', collectionAddress)
     .where('tokenId', '==', tokenId)
@@ -623,6 +623,7 @@ async function getRevealData(
       inCollectionPixelRank: rankingInfoData?.inCollectionPixelRank,
       pixelScore: rankingInfoData?.pixelScore,
       pixelRank: rankingInfoData?.pixelRank,
+      pixelRankBucket: rankingInfoData?.pixelRankBucket,
       pixelRankRevealed: true,
       pixelRankVisible: false,
       pixelRankRevealer: revealer,
