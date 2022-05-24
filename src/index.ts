@@ -180,20 +180,28 @@ app.get('/u/:user/nfts', async (req: Request, res: Response) => {
 app.get('/u/:user/reveals', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
   console.log('Fetching reveals for user', user);
-  const startAfterTimestamp = parseInt(String(req.query.startAfterTimestamp)) ?? Date.now();
+  const startAfterTimestamp = req.query.startAfterTimestamp ?? 0;
   try {
-    const revealSnap = await pixelScoreDb
+    let query = pixelScoreDb
       .collection(REVEALS_COLL)
       .where('revealer', '==', user)
       .where('chainId', '==', '1')
       .limit(DEFAULT_PAGE_LIMIT)
-      .orderBy('timestamp', 'desc')
-      .startAfter(startAfterTimestamp)
-      .get();
+      .orderBy('timestamp', 'desc');
+
+    if (startAfterTimestamp > 0) {
+      query = query.startAfter(startAfterTimestamp);
+    }
+
+    const revealSnap = await query.get();
 
     const resp: RevealOrder[] = [];
     for (const revealDoc of revealSnap.docs) {
       const revealDocData = revealDoc.data() as RevealOrder;
+
+      // make sure the array isn't undefined, or crashes below
+      revealDocData.revealItems = revealDocData.revealItems || [];
+
       const revealItemsSnap = await revealDoc.ref.collection(REVEALS_ITEMS_SUB_COLL).get();
       for (const revealItemDoc of revealItemsSnap.docs) {
         const revealItemDocData = revealItemDoc.data() as TokenInfo;

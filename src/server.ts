@@ -39,7 +39,7 @@ export const startServer = (): Express => {
     console.log(`Server is running on port ${port}`);
   });
 
-  app.all('/u/*', async (req: Request, res: Response, next: NextFunction) => {
+  app.all('/u/:user/*', async (req: Request, res: Response, next: NextFunction) => {
     const userAddress = trimLowerCase(req.params.user);
     const authorized = isUserAuthenticated(
       userAddress,
