@@ -23,22 +23,30 @@ export const startServer = (): Express => {
   const whitelist = [localHost, '54.236.136.17', '34.237.24.169'];
   const corsOptions: cors.CorsOptions = {
     origin: (origin, callback) => {
-      const result = whitelist.filter((regEx) => {
-        return origin?.match(regEx);
-      });
-      let isWhitelisted = result.length > 0;
+      if (origin) {
+        const result = whitelist.filter((regEx) => {
+          return origin.match(regEx);
+        });
+        let isWhitelisted = result.length > 0;
 
-      if (!isWhitelisted) {
-        if (origin?.includes('/webhooks/alchemy/padw')) {
-          isWhitelisted = true;
+        if (!isWhitelisted) {
+          if (origin.includes('/webhooks/alchemy/padw')) {
+            isWhitelisted = true;
+          } else if (origin.includes('54.236.136.17')) {
+            isWhitelisted = true;
+          } else if (origin.includes('34.237.24.169')) {
+            isWhitelisted = true;
+          }
         }
+
+        if (!isWhitelisted) {
+          console.log(`cors rejecting origin: ${origin}`);
+        }
+
+        callback(isWhitelisted ? null : Error('Bad Request'), isWhitelisted);
       }
 
-      if (!isWhitelisted) {
-        console.log(`cors rejecting origin: ${origin}`);
-      }
-
-      callback(isWhitelisted ? null : Error('Bad Request'), isWhitelisted);
+      callback(null, true);
     }
   };
   app.use(cors(corsOptions));
