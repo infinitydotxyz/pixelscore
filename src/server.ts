@@ -20,7 +20,7 @@ export const startServer = (): Express => {
 
   // todo: change this
   const localHost = /http:\/\/localhost:\d+/;
-  const whitelist = [localHost];
+  const whitelist = [localHost, '54.236.136.17', '34.237.24.169'];
   const corsOptions: cors.CorsOptions = {
     origin: (origin, callback) => {
       const result = whitelist.filter((regEx) => {
