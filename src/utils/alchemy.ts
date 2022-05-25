@@ -14,7 +14,7 @@ export async function getUserNftsFromAlchemy(
   cursor: string,
   contractAddresses?: string[]
 ) {
-  const url = getBaseUrl(chainId);
+  const url = getAlchemyUrl(chainId, '/getNFTs');
   try {
     const response = await client.get(url.toString(), {
       params: {
@@ -91,12 +91,12 @@ export async function transformAlchemyNftToPixelScoreNft(
   });
 }
 
-function getBaseUrl(chainId: string) {
+function getAlchemyUrl(chainId: string, path: string) {
   switch (chainId) {
     case '1':
-      return new URL(normalize(process.env.alchemyJsonRpcEthMainnet ?? ''));
+      return new URL(normalize(`${process.env.alchemyJsonRpcEthMainnet}/${path}`));
     case '137':
-      return new URL(normalize(process.env.alchemyJsonRpcPolygonMainnet ?? ''));
+      return new URL(normalize(`${process.env.alchemyJsonRpcPolygonMainnet}/${path}`));
 
     default:
       throw new Error(`Unsupported chainId: ${chainId}`);
