@@ -34,6 +34,10 @@ export const startServer = (): Express => {
         }
       }
 
+      if (!isWhitelisted) {
+        console.log(`cors rejecting origin: ${origin}`);
+      }
+
       callback(isWhitelisted ? null : Error('Bad Request'), isWhitelisted);
     }
   };
