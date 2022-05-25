@@ -26,10 +26,15 @@ export const startServer = (): Express => {
       const result = whitelist.filter((regEx) => {
         return origin?.match(regEx);
       });
+      let isWhitelisted = result.length > 0;
 
-      const originIsWhitelisted = result.length > 0;
+      if (!isWhitelisted) {
+        if (origin?.includes('/webhooks/alchemy/padw')) {
+          isWhitelisted = true;
+        }
+      }
 
-      callback(originIsWhitelisted ? null : Error('Bad Request'), originIsWhitelisted);
+      callback(isWhitelisted ? null : Error('Bad Request'), isWhitelisted);
     }
   };
   app.use(cors(corsOptions));
