@@ -41,6 +41,7 @@ import { BigNumber } from 'ethers';
 import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from './utils/alchemy';
 import { getCollectionByAddress, getNftsFromInfinityFirestore, isCollectionSupported } from './utils/infinity';
 import { startServer } from './server';
+import bodyParser from 'body-parser';
 
 dotenv.config();
 
@@ -220,43 +221,55 @@ app.get('/u/:user/reveals', async (req: Request, res: Response) => {
 
 // ########################### Endpoint that receives webhook events from Alchemy ###########################
 
-app.post('/webhooks/alchemy/padw', (req: Request, res: Response) => {
-  console.log('padw webhook body', JSON.stringify(req.body));
-  try {
-    if (isValidSignature(req) && isValidRequest(req)) {
-      const data = req.body as AlchemyAddressActivityWebHook;
-      // first store webhook data in firestore
-      const webHookEventId = data.id;
-      pixelScoreDb
-        .collection(WEBHOOK_EVENTS_COLL)
-        .doc(webHookEventId)
-        .set(data, { merge: true })
-        .then(() => {
-          console.log('webhook data stored in firestore with id', webHookEventId);
-        })
-        .catch((err) => {
-          console.error('Error while storing webhook data in firestore', webHookEventId, err);
-        });
-
-      // then update reveal order
-      updateRevealOrder(data)
-        .then(() => {
-          console.log(`Successfully processed reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`);
-          res.sendStatus(200);
-        })
-        .catch((err) => {
-          console.error(`Error processing reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`, err);
-          res.sendStatus(200); // to prevent retries
-        });
-    } else {
-      console.error('Invalid signature or request');
-      res.sendStatus(200); // to prevent retries
+app.post(
+  '/webhooks/alchemy/padw',
+  bodyParser.json({
+    verify: function (req, res, buf, encoding: BufferEncoding) {
+      const signature = req.headers['x-alchemy-signature']; // Lowercase for NodeJS
+      const body = buf.toString(encoding || 'utf8');
+      const matches = isValidSignature(body, signature as string);
+      if (!matches) {
+        throw 'Alchemy wwebhook signature does not match!';
+      }
     }
-  } catch (err) {
-    console.error('Error while processing padw webhook', err);
-    res.sendStatus(500);
+  }),
+  (req: Request, res: Response) => {
+    try {
+      if (isValidRequest(req)) {
+        const data = req.body as AlchemyAddressActivityWebHook;
+        // first store webhook data in firestore
+        const webHookEventId = data.id;
+        pixelScoreDb
+          .collection(WEBHOOK_EVENTS_COLL)
+          .doc(webHookEventId)
+          .set(data, { merge: true })
+          .then(() => {
+            console.log('webhook data stored in firestore with id', webHookEventId);
+          })
+          .catch((err) => {
+            console.error('Error while storing webhook data in firestore', webHookEventId, err);
+          });
+
+        // then update reveal order
+        updateRevealOrder(data)
+          .then(() => {
+            console.log(`Successfully processed reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`);
+            res.sendStatus(200);
+          })
+          .catch((err) => {
+            console.error(`Error processing reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`, err);
+            res.sendStatus(200); // to prevent retries
+          });
+      } else {
+        console.error('Invalid request');
+        res.sendStatus(200); // to prevent retries
+      }
+    } catch (err) {
+      console.error('Error while processing padw webhook', err);
+      res.sendStatus(500);
+    }
   }
-});
+);
 
 // ################################# User authenticated write endpoints #################################
 
@@ -648,16 +661,12 @@ async function getRevealData(
   }
 }
 
-function isValidSignature(req: Request): boolean {
+function isValidSignature(rawBody: string, signature: string): boolean {
   try {
     const signingKey = process.env.ALCHMEY_PADW_SIGNING_KEY ?? '';
-    const signature = req.headers['x-alchemy-signature']; // Lowercase for NodeJS
     const hmac = createHmac('sha256', signingKey); // Create a HMAC SHA256 hash using the signing key
-    hmac.update(JSON.stringify(req.body), 'utf8'); // Update the signing key hash with the request body using utf8
+    hmac.update(rawBody, 'utf8'); // Update the signing key hash with the request body using utf8
     const digest = hmac.digest('hex');
-    console.log('digest', digest);
-    console.log('signingKey', signingKey);
-    console.log('req body', JSON.stringify(req.body));
     const isValid = signature === digest;
     if (!isValid) {
       console.error('Invalid signature', signature);
