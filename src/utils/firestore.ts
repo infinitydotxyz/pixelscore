@@ -16,5 +16,7 @@ export const fsAdminInfinity = fbAdmin.initializeApp(
   'infinity'
 );
 
-export const pixelScoreDb = fsAdminPixelScore.firestore().settings({ ignoreUndefinedProperties: true });
+export const pixelScoreDb = fsAdminPixelScore.firestore();
+pixelScoreDb.settings({ ignoreUndefinedProperties: true });
+
 export const infinityDb = fsAdminInfinity.firestore();
