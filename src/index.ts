@@ -324,7 +324,11 @@ app.post('/u/:user/refresh', async (req: Request, res: Response) => {
     const revealOrderSnapshot = await revealOrderRef.get();
     if (revealOrderSnapshot.size === 1) {
       const revealOrderDocRef = revealOrderSnapshot.docs[0].ref;
-      const revealOrderData = revealOrderSnapshot.docs[0].data as unknown as RevealOrder;
+      const revealOrderData = revealOrderSnapshot.docs[0].data() as RevealOrder;
+
+      // make sure the array isn't undefined, or crashes below
+      revealOrderData.revealItems = revealOrderData.revealItems || [];
+
       if (revealOrderData.txnStatus === 'success') {
         const revealItemsSnap = await revealOrderDocRef.collection(REVEALS_ITEMS_SUB_COLL).get();
         for (const revealItemDoc of revealItemsSnap.docs) {
@@ -338,7 +342,7 @@ app.post('/u/:user/refresh', async (req: Request, res: Response) => {
         console.log('Checking pending txn on refresh', txnHash);
         try {
           // check async
-          updatePendingTxn(user, txnHash, chainId, revealOrderDocRef);
+          updatePendingTxn(user, chainId, txnHash, revealOrderDocRef);
         } catch (err) {
           console.error('Error while checking pending txn on refresh', txnHash, err);
         }
