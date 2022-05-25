@@ -245,11 +245,12 @@ app.post('/webhooks/alchemy/padw', (req: Request, res: Response) => {
           res.sendStatus(200);
         })
         .catch((err) => {
-          console.error(`Error processing reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`);
-          throw err;
+          console.error(`Error processing reveal with txnHash: ${trimLowerCase(data.event.activity[0].hash)}`, err);
+          res.sendStatus(200); // to prevent retries
         });
     } else {
-      throw new Error('Invalid signature or request');
+      console.error('Invalid signature or request');
+      res.sendStatus(200); // to prevent retries
     }
   } catch (err) {
     console.error('Error while processing padw webhook', err);
@@ -651,10 +652,12 @@ function isValidSignature(req: Request): boolean {
   try {
     const signingKey = process.env.ALCHMEY_PADW_SIGNING_KEY ?? '';
     const signature = req.headers['x-alchemy-signature']; // Lowercase for NodeJS
-    const body = req.body;
     const hmac = createHmac('sha256', signingKey); // Create a HMAC SHA256 hash using the signing key
-    hmac.update(JSON.stringify(body), 'utf8'); // Update the signing key hash with the request body using utf8
+    hmac.update(JSON.stringify(req.body), 'utf8'); // Update the signing key hash with the request body using utf8
     const digest = hmac.digest('hex');
+    console.log('digest', digest);
+    console.log('signingKey', signingKey);
+    console.log('req body', JSON.stringify(req.body));
     const isValid = signature === digest;
     if (!isValid) {
       console.error('Invalid signature', signature);
