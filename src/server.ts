@@ -44,9 +44,9 @@ export const startServer = (): Express => {
         }
 
         callback(isWhitelisted ? null : Error('Bad Request'), isWhitelisted);
+      } else {
+        callback(null, true);
       }
-
-      callback(null, true);
     }
   };
   app.use(cors(corsOptions));
