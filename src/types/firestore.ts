@@ -54,3 +54,20 @@ interface NftStateMetadataDto {
 export interface NftStateDto {
   metadata: NftStateMetadataDto;
 }
+
+export interface RankInfoArray {
+  data: RankInfo[];
+  cursor: string;
+  hasNextPage: boolean;
+}
+
+export interface RankInfo {
+  chainId: string;
+  collectionAddress: string;
+  imageUrl: string;
+  inCollectionPixelRank?: number;
+  pixelRank?: number;
+  pixelRankBucket?: number;
+  pixelScore?: number;
+  tokenId: string;
+}
