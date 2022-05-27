@@ -38,6 +38,10 @@ export interface Nft {
   state?: NftStateDto;
   tokenStandard: TokenStandard;
   owner?: string;
+  inCollectionPixelRank?: number;
+  pixelRank?: number;
+  pixelRankBucket?: number;
+  pixelScore?: number;
 }
 
 export interface NftImage {

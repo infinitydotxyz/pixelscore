@@ -449,6 +449,7 @@ async function getUserNfts(
 ): Promise<NftArray> {
   type Cursor = { pageKey?: string; startAtToken?: string };
   const cursor = decodeCursorToObject<Cursor>(query.cursor);
+
   const getPage = async (
     pageKey: string,
     startAtToken?: string
@@ -489,8 +490,11 @@ async function getUserNfts(
 
   const continueFromCurrentPage = nfts.length > query.limit;
   const hasNextPage = continueFromCurrentPage || alchemyHasNextPage;
-  const nftsToReturn = nfts.slice(0, query.limit);
+  let nftsToReturn = nfts.slice(0, query.limit);
   const nftToStartAt = nfts?.[query.limit]?.tokenId;
+
+  // add ranking info for each nft
+  nftsToReturn = await addRankInfoToNFTs(nftsToReturn);
 
   const updatedCursor = encodeCursor({
     pageKey: continueFromCurrentPage ? pageKey : nextPageKey,
@@ -502,6 +506,38 @@ async function getUserNfts(
     cursor: updatedCursor,
     hasNextPage
   };
+}
+
+async function addRankInfoToNFTs(nfts: Nft[]): Promise<Nft[]> {
+  const docs: FirebaseFirestore.DocumentReference[] = [];
+
+  for (const nft of nfts) {
+    const docId = getDocIdHash({
+      chainId: nft.chainId,
+      collectionAddress: nft.collectionAddress ?? '',
+      tokenId: nft.tokenId
+    });
+
+    docs.push(pixelScoreDb.doc(`${RANKINGS_COLL}/${docId}`));
+  }
+
+  const results = await pixelScoreDb.getAll(...docs);
+
+  if (results.length === nfts.length) {
+    for (let i = 0; i < nfts.length; i++) {
+      const n = nfts[i];
+      const ps = results[i].data();
+
+      if (ps) {
+        n.inCollectionPixelRank = ps.inCollectionPixelRank;
+        n.pixelRank = ps.pixelRank;
+        n.pixelRankBucket = ps.pixelRankBucket;
+        n.pixelScore = ps.pixelScore;
+      }
+    }
+  }
+
+  return nfts;
 }
 
 async function getCollectionNfts(chainId: string, collectionAddress: string, query: NftsQuery): Promise<NftArray> {
