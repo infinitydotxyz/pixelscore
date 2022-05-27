@@ -131,12 +131,16 @@ app.get('/collections/:chainId/:collectionAddress/nfts', async (req: Request, re
   const collectionAddress = trimLowerCase(req.params.collectionAddress);
   const query = req.query as unknown as NftsQuery;
 
-  let data;
-  if (chainId === 'temp-hack') {
-    data = await getCollectionNfts(chainId, collectionAddress, query);
-  } else {
-    data = await getCollectionNfts2(chainId, collectionAddress, query);
-  }
+  const data = await getCollectionNfts(chainId, collectionAddress, query);
+  res.send(data);
+});
+
+app.get('/collections/:chainId/:collectionAddress/nfts99', async (req: Request, res: Response) => {
+  const chainId = req.params.chainId;
+  const collectionAddress = trimLowerCase(req.params.collectionAddress);
+  const query = req.query as unknown as NftsQuery;
+
+  const data = await getCollectionNfts2(chainId, collectionAddress, query, 9);
   res.send(data);
 });
 
@@ -746,27 +750,32 @@ function defaultCollectionQueryOptions(): CollectionQueryOptions {
 async function getCollectionNfts2(
   chainId: string,
   collectionAddress: string,
-  query: NftsQuery
+  query: NftsQuery,
+  maxPixelRank: number
 ): Promise<RankInfoArray> {
-  type Cursor = Record<NftsOrderBy, string | number>;
-
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
 
   nftsQuery = nftsQuery.where('collectionAddress', '==', collectionAddress);
 
+  nftsQuery = nftsQuery.where('pixelRankBucket', '<=', maxPixelRank);
+  nftsQuery = nftsQuery.orderBy('pixelRankBucket');
+
   const orderBy: string = query.orderBy;
   nftsQuery = nftsQuery.orderBy(orderBy, query.orderDirection);
 
-  const decodedCursor = decodeCursorToObject<Cursor>(query.cursor);
-  if (decodedCursor?.[query.orderBy]) {
-    nftsQuery = nftsQuery.startAfter(decodedCursor[query.orderBy]);
+  if (query.cursor) {
+    const startDoc = await pixelScoreDb.doc(query.cursor).get();
+    nftsQuery = nftsQuery.startAfter(startDoc);
   }
 
   nftsQuery = nftsQuery.limit(query.limit + 1); // +1 to check if there are more events
 
   const results = await nftsQuery.get();
+  const paths: string[] = [];
   const data = results.docs.map((item) => {
     const rankInfo = item.data() as RankInfo;
+
+    paths.push(item.ref.path);
 
     return rankInfo;
   });
@@ -774,24 +783,18 @@ async function getCollectionNfts2(
   const hasNextPage = data.length > query.limit;
   if (hasNextPage) {
     data.pop();
+    paths.pop();
   }
 
-  const cursor: Cursor = {} as any;
-  const lastItem = data[data.length - 1];
-  for (const key of Object.values(NftsOrderBy) as NftsOrderBy[]) {
-    switch (key) {
-      case NftsOrderBy.TokenId:
-        if (lastItem?.[key]) {
-          cursor[key] = lastItem[key];
-        }
-        break;
-    }
+  // cursor is path of last item
+  let cursor = '';
+  if (paths.length > 0) {
+    cursor = paths[paths.length - 1];
   }
-  const encodedCursor = encodeCursor(cursor);
 
   return {
     data,
-    cursor: encodedCursor,
+    cursor: cursor,
     hasNextPage
   };
 }
