@@ -140,7 +140,7 @@ app.get('/collections/:chainId/:collectionAddress/nfts99', async (req: Request, 
   const collectionAddress = trimLowerCase(req.params.collectionAddress);
   const query = req.query as unknown as NftsQuery;
 
-  const data = await getCollectionNfts2(chainId, collectionAddress, query, 9);
+  const data = await getCollectionNfts2(chainId, collectionAddress, query, 0, 9);
   res.send(data);
 });
 
@@ -751,17 +751,17 @@ async function getCollectionNfts2(
   chainId: string,
   collectionAddress: string,
   query: NftsQuery,
+  minPixelRank: number,
   maxPixelRank: number
 ): Promise<RankInfoArray> {
+  const rankRange = [...Array(maxPixelRank - minPixelRank + 1).keys()].map((x) => x + minPixelRank);
+
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
 
   nftsQuery = nftsQuery.where('collectionAddress', '==', collectionAddress);
+  nftsQuery = nftsQuery.where('pixelRankBucket', 'in', rankRange);
 
-  nftsQuery = nftsQuery.where('pixelRankBucket', '<=', maxPixelRank);
-  nftsQuery = nftsQuery.orderBy('pixelRankBucket');
-
-  const orderBy: string = query.orderBy;
-  nftsQuery = nftsQuery.orderBy(orderBy, query.orderDirection);
+  nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
 
   if (query.cursor) {
     const startDoc = await pixelScoreDb.doc(query.cursor).get();
