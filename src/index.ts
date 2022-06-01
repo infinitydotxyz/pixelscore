@@ -38,8 +38,7 @@ import {
 import { infinityDb, pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
-import { BigNumber } from 'ethers';
-import { getUserNftsFromAlchemy, transformAlchemyNftToPixelScoreNft } from './utils/alchemy';
+import { getPageUserNftsFromAlchemy } from './utils/alchemy';
 import { getCollectionByAddress, getNftsFromInfinityFirestore, isCollectionSupported } from './utils/infinity';
 import { startServer } from './server';
 import bodyParser from 'body-parser';
@@ -450,28 +449,6 @@ async function getUserNfts(
   type Cursor = { pageKey?: string; startAtToken?: string };
   const cursor = decodeCursorToObject<Cursor>(query.cursor);
 
-  const getPage = async (
-    pageKey: string,
-    startAtToken?: string
-  ): Promise<{ pageKey: string; nfts: Nft[]; hasNextPage: boolean }> => {
-    const response = await getUserNftsFromAlchemy(userAddress, chainId, pageKey, query.collectionAddresses);
-    const nextPageKey = response?.pageKey ?? '';
-    let nfts = response?.ownedNfts ?? [];
-
-    if (startAtToken) {
-      const indexToStartAt = nfts.findIndex(
-        (item: any) => BigNumber.from(item.id.tokenId).toString() === cursor.startAtToken
-      );
-      nfts = nfts.slice(indexToStartAt);
-    }
-
-    const nftsToTransform = nfts.map((item: any) => ({ alchemyNft: item, chainId }));
-    const results = await transformAlchemyNftToPixelScoreNft(nftsToTransform);
-    const validNfts = results.filter((item: any) => !!item) as Nft[];
-
-    return { pageKey: nextPageKey, nfts: validNfts, hasNextPage: !!nextPageKey };
-  };
-
   const limit = query.limit + 1; // +1 to check if there is a next page
   let nfts: Nft[] = [];
   let alchemyHasNextPage = true;
@@ -481,7 +458,15 @@ async function getUserNfts(
   while (nfts.length < limit && alchemyHasNextPage) {
     pageKey = nextPageKey;
     const startAtToken = pageNumber === 0 && cursor.startAtToken ? cursor.startAtToken : undefined;
-    const response = await getPage(pageKey, startAtToken);
+
+    const response = await getPageUserNftsFromAlchemy(
+      pageKey,
+      chainId,
+      userAddress,
+      query.collectionAddresses,
+      startAtToken
+    );
+
     nfts = [...nfts, ...response.nfts];
     alchemyHasNextPage = response.hasNextPage;
     nextPageKey = response.pageKey;
