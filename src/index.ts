@@ -863,7 +863,6 @@ const getPortfolioScore = async (userAddress: string, chainId: string): Promise<
   let alchemyHasNextPage = true;
   let pageKey = '';
   let nextPageKey = '';
-  let pageNumber = 0;
   while (nfts.length < limit && alchemyHasNextPage) {
     pageKey = nextPageKey;
     const startAtToken = undefined;
@@ -873,7 +872,6 @@ const getPortfolioScore = async (userAddress: string, chainId: string): Promise<
     nfts = [...nfts, ...response.nfts];
     alchemyHasNextPage = response.hasNextPage;
     nextPageKey = response.pageKey;
-    pageNumber += 1;
   }
 
   // add ranking info for each nft
