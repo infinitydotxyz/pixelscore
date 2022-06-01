@@ -65,6 +65,7 @@ export async function getCollectionsByAddress(collections: { address: string; ch
   ].filter((item) => item !== null) as string[];
 
   const collectionRefs = docIds.map((docId) => infinityDb.collection(firestoreConstants.COLLECTIONS_COLL).doc(docId));
+  const collectionMap: { [id: string]: Partial<Collection> } = {};
 
   const getCollection = (coll: { address: string; chainId: string }) => {
     try {
@@ -76,17 +77,14 @@ export async function getCollectionsByAddress(collections: { address: string; ch
     }
   };
 
-  if (collectionRefs.length === 0) {
-    return { getCollection };
+  if (collectionRefs.length > 0) {
+    const collectionsSnap = await infinityDb.getAll(...collectionRefs);
+
+    collectionsSnap.forEach((item, index) => {
+      const docId = docIds[index];
+      collectionMap[docId] = (item.data() ?? {}) as Partial<Collection>;
+    });
   }
-
-  const collectionsSnap = await infinityDb.getAll(...collectionRefs);
-
-  const collectionMap: { [id: string]: Partial<Collection> } = {};
-  collectionsSnap.forEach((item, index) => {
-    const docId = docIds[index];
-    collectionMap[docId] = (item.data() ?? {}) as Partial<Collection>;
-  });
 
   return { getCollection };
 }
