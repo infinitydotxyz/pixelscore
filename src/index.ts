@@ -19,6 +19,7 @@ import {
   NftRankQuery,
   NftsOrderBy,
   NftsQuery,
+  PortfolioScore,
   UserNftsQuery
 } from './types/apiQueries';
 import {
@@ -244,6 +245,15 @@ app.get('/u/:user/reveals', async (req: Request, res: Response) => {
     console.error('Error while getting reveals for user', user, err);
     res.sendStatus(500);
   }
+});
+
+app.get('/u/:user/portfolio-score', async (req: Request, res: Response) => {
+  const user = trimLowerCase(req.params.user);
+  const chainId = (req.query.chainId as string) ?? '1';
+
+  const scoreInfo = await getPortfolioScore(user, chainId);
+
+  res.send(scoreInfo);
 });
 
 // ========================================= POST REQUESTS =========================================
@@ -846,3 +856,37 @@ async function getCollectionNfts2(
     hasNextPage
   };
 }
+
+const getPortfolioScore = async (userAddress: string, chainId: string): Promise<PortfolioScore> => {
+  const limit = 10000 + 1; // +1 to check if there is a next page
+  let nfts: Nft[] = [];
+  let alchemyHasNextPage = true;
+  let pageKey = '';
+  let nextPageKey = '';
+  let pageNumber = 0;
+  while (nfts.length < limit && alchemyHasNextPage) {
+    pageKey = nextPageKey;
+    const startAtToken = undefined;
+
+    const response = await getPageUserNftsFromAlchemy(pageKey, chainId, userAddress, [], startAtToken);
+
+    nfts = [...nfts, ...response.nfts];
+    alchemyHasNextPage = response.hasNextPage;
+    nextPageKey = response.pageKey;
+    pageNumber += 1;
+  }
+
+  // add ranking info for each nft
+  nfts = await addRankInfoToNFTs(nfts);
+
+  let count = 0;
+  let score = 0;
+  for (const nft of nfts) {
+    if (nft.pixelScore || nft.pixelScore === 0) {
+      count++;
+      score += nft.pixelScore;
+    }
+  }
+
+  return { score, count };
+};

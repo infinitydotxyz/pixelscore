@@ -49,3 +49,8 @@ export interface NftRankQuery {
   minRank: number;
   maxRank: number;
 }
+
+export interface PortfolioScore {
+  score: number;
+  count: number;
+}
