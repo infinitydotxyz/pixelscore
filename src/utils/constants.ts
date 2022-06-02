@@ -22,6 +22,7 @@ export const COLLECTIONS_COLL = 'collections';
 export const WEBHOOK_EVENTS_COLL = 'webhookEvents';
 export const RANKINGS_COLL = 'rankings';
 export const REVEALS_COLL = 'reveals';
+export const USERS_COLL = 'users';
 export const NFTS_SUB_COLL = 'nfts';
 export const REVEALS_ITEMS_SUB_COLL = 'revealItems';
 

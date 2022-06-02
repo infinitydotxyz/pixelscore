@@ -11,7 +11,7 @@ import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
 import { ExternalNftArray, Nft, RankInfoArray, NftArray, RankInfo } from 'types/firestore';
-import { AlchemyAddressActivityWebHook, RevealOrder, TokenInfo, UpdateRankVisibility } from './types/main';
+import { AlchemyAddressActivityWebHook, RevealOrder, TokenInfo, UpdateRankVisibility, UserRecord } from './types/main';
 import {
   CollectionQueryOptions,
   CollectionSearchQuery,
@@ -34,7 +34,8 @@ import {
   REVEALS_COLL,
   REVEALS_ITEMS_SUB_COLL,
   REVEAL_ITEMS_LIMIT,
-  WEBHOOK_EVENTS_COLL
+  WEBHOOK_EVENTS_COLL,
+  USERS_COLL
 } from './utils/constants';
 import { infinityDb, pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
@@ -247,13 +248,62 @@ app.get('/u/:user/reveals', async (req: Request, res: Response) => {
   }
 });
 
+// this calcs the score, look in the UserRecord for the already calced value
 app.get('/u/:user/portfolio-score', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
   const chainId = (req.query.chainId as string) ?? '1';
 
   const scoreInfo = await getPortfolioScore(user, chainId);
 
+  const doc = pixelScoreDb.collection(USERS_COLL).doc(user);
+
+  const userData: Partial<UserRecord> = { portfolioScore: scoreInfo.score };
+  doc.set(userData, { merge: true });
+
   res.send(scoreInfo);
+});
+
+app.get('/u/:user', async (req: Request, res: Response) => {
+  const user = trimLowerCase(req.params.user);
+  const chainId = (req.query.chainId as string) ?? '1';
+
+  const doc = pixelScoreDb.collection(USERS_COLL).doc(user);
+
+  let userRec = (await doc.get()).data() as UserRecord | undefined;
+
+  let save = false;
+  if (!userRec) {
+    userRec = { name: '', address: user, portfolioScore: -1 };
+    save = true;
+  }
+
+  if (userRec.address === undefined) {
+    userRec.address = user;
+    save = true;
+  }
+
+  if (userRec.portfolioScore === undefined || userRec.portfolioScore === -1) {
+    const score = await getPortfolioScore(user, chainId);
+
+    userRec.portfolioScore = score.score / score.count;
+    save = true;
+  }
+
+  if (save) {
+    doc.set(userRec, { merge: true });
+  }
+
+  res.send(userRec);
+});
+
+app.post('/u/:user', async (req: Request, res: Response) => {
+  const user = trimLowerCase(req.params.user);
+
+  const data = req.body as UserRecord;
+
+  await pixelScoreDb.collection(USERS_COLL).doc(user).set(data);
+
+  res.sendStatus(200);
 });
 
 // ========================================= POST REQUESTS =========================================

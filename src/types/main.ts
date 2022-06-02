@@ -72,3 +72,9 @@ export interface AlchemyAddressActivity {
   asset: string;
   category: 'external' | 'internal' | 'token';
 }
+
+export interface UserRecord {
+  address: string;
+  name: string;
+  portfolioScore: number;
+}
