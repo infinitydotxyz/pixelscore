@@ -53,7 +53,7 @@ async function processOneCollection(dirPath: string, collection: string) {
     const collectionInfo = await getCollectionInfo(collection);
     if (collectionInfo) {
       const chainId = collectionInfo.chainId;
-      const collectionRef = pixelScoreDb.collection(RANKINGS_COLL).doc(chainId + ':' + collection);
+      const collectionRef = pixelScoreDb.collection(COLLECTIONS_COLL).doc(chainId + ':' + collection);
       pixelScoreDbBatchHandler.add(collectionRef, collectionInfo, { merge: true });
       // save token info
       const collectionDir = path.join(dirPath, collection);
