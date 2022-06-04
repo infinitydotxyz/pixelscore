@@ -566,18 +566,20 @@ async function addRankInfoToNFTs(nfts: Nft[]): Promise<Nft[]> {
     docs.push(pixelScoreDb.doc(`${RANKINGS_COLL}/${docId}`));
   }
 
-  const results = await pixelScoreDb.getAll(...docs);
+  if (docs.length > 0) {
+    const results = await pixelScoreDb.getAll(...docs);
 
-  if (results.length === nfts.length) {
-    for (let i = 0; i < nfts.length; i++) {
-      const n = nfts[i];
-      const ps = results[i].data();
+    if (results.length === nfts.length) {
+      for (let i = 0; i < nfts.length; i++) {
+        const n = nfts[i];
+        const ps = results[i].data();
 
-      if (ps) {
-        n.inCollectionPixelRank = ps.inCollectionPixelRank;
-        n.pixelRank = ps.pixelRank;
-        n.pixelRankBucket = ps.pixelRankBucket;
-        n.pixelScore = ps.pixelScore;
+        if (ps) {
+          n.inCollectionPixelRank = ps.inCollectionPixelRank;
+          n.pixelRank = ps.pixelRank;
+          n.pixelRankBucket = ps.pixelRankBucket;
+          n.pixelScore = ps.pixelScore;
+        }
       }
     }
   }
