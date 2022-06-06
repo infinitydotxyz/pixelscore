@@ -1,24 +1,19 @@
-import { BaseCollection } from '@infinityxyz/lib/types/core/Collection';
-import { getSearchFriendlyString, trimLowerCase } from '@infinityxyz/lib/utils';
+import { trimLowerCase } from '@infinityxyz/lib/utils';
 import { execSync } from 'child_process';
 import { ethers } from 'ethers';
 import fs from 'fs';
 import path from 'path';
-import { CollectionInfo, TokenInfo } from '../types/main';
+import { TokenInfo } from '../types/main';
 import { COLLECTIONS_COLL, NFTS_SUB_COLL } from '../utils/constants';
-import { infinityDb, pixelScoreDb } from '../utils/firestore';
+import { pixelScoreDb } from '../utils/firestore';
 import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
-import MnemonicClient, { MnemonicContract } from '../utils/mnemonic';
-import OpenSeaClient from '../utils/opensea';
+import { getCollectionInfo } from './metadataUtils';
 
 const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 const DATA_DIR = 'data';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE = 'metadata.csv';
 const COLLECTION_COMPLETE_FILE = 'collection-complete.txt';
-
-const mnemonic = new MnemonicClient();
-const opensea = new OpenSeaClient();
 
 async function main() {
   console.log('Collecting data...');
@@ -104,107 +99,6 @@ async function saveTokenInfo(
   } catch (error) {
     console.error('Error saving token info:', error);
   }
-}
-
-async function getCollectionInfo(collection: string): Promise<CollectionInfo | undefined> {
-  try {
-    // try fetching from infinity
-    let info = await getCollectionInfoFromInfinity(collection);
-    if (!info) {
-      // try from opensea
-      info = await getCollectionInfoFromOpensea(collection);
-      if (!info) {
-        // try from mnemonic
-        info = await getCollectionInfoFromMnemonic(collection);
-      }
-    }
-    return info;
-  } catch (error) {
-    console.error('Error getting collection info:', error);
-  }
-}
-
-async function getCollectionInfoFromInfinity(collection: string): Promise<CollectionInfo | undefined> {
-  try {
-    const collectionRef = infinityDb.collection(COLLECTIONS_COLL).doc(collection);
-    const data = (await collectionRef.get()).data() as BaseCollection;
-    if (data) {
-      const info: CollectionInfo = {
-        address: trimLowerCase(data.address),
-        chainId: '1',
-        tokenStandard: 'ERC721',
-        slug: data.slug,
-        name: data.metadata.name,
-        symbol: data.metadata.symbol,
-        description: data.metadata.description,
-        profileImage: data.metadata.profileImage,
-        bannerImage: data.metadata.bannerImage,
-        cardDisplaytype: data.metadata.displayType,
-        twitter: data.metadata.links.twitter,
-        discord: data.metadata.links.discord,
-        external: data.metadata.links.external
-      };
-      return info;
-    }
-  } catch (error) {
-    console.error('Error getting collection info from infinity:', error);
-  }
-  return undefined;
-}
-
-async function getCollectionInfoFromOpensea(collection: string): Promise<CollectionInfo | undefined> {
-  try {
-    const data = await opensea.getCollectionMetadata(collection);
-    if (data) {
-      const info: CollectionInfo = {
-        address: trimLowerCase(collection),
-        chainId: '1',
-        tokenStandard: 'ERC721',
-        slug: getSearchFriendlyString(data.links.slug),
-        name: data.name,
-        symbol: data.symbol,
-        description: data.description,
-        profileImage: data.profileImage,
-        bannerImage: data.bannerImage,
-        cardDisplaytype: data.displayType,
-        twitter: data.links.twitter,
-        discord: data.links.discord,
-        external: data.links.external
-      };
-      return info;
-    }
-  } catch (error) {
-    console.error('Error getting collection info from opensea:', error);
-  }
-
-  return undefined;
-}
-
-async function getCollectionInfoFromMnemonic(collection: string): Promise<CollectionInfo | undefined> {
-  try {
-    const data = (await mnemonic.getCollection(collection)) as MnemonicContract;
-    if (data) {
-      const info: CollectionInfo = {
-        address: trimLowerCase(data.address),
-        chainId: '1',
-        tokenStandard: 'ERC721',
-        slug: getSearchFriendlyString(data.name),
-        name: data.name,
-        symbol: data.symbol,
-        description: '',
-        profileImage: '',
-        bannerImage: '',
-        cardDisplaytype: '',
-        twitter: '',
-        discord: '',
-        external: ''
-      };
-      return info;
-    }
-  } catch (error) {
-    console.error('Error getting collection info from mnemonic:', error);
-  }
-  return undefined;
 }
 
 main();
