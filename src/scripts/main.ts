@@ -2,7 +2,7 @@ import fbAdmin from 'firebase-admin';
 import * as stream from 'stream';
 import { promisify } from 'util';
 import axios from 'axios';
-import { createWriteStream, existsSync, readdirSync, mkdirSync, writeFileSync } from 'fs';
+import { createWriteStream, existsSync, readdirSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
 import path from 'path';
 import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
 import { execSync, exec } from 'child_process';
@@ -223,7 +223,11 @@ async function main() {
   } else {
     // fetch collections from firestore
     console.log('============================== Fetching collections from firestore =================================');
-    let startAfter = '';
+    let startAfter = '0x1aba27d6a420feb25af6cf6b80b93b7526725a71';
+    const offsetFile = path.join(__dirname, 'offset.txt');
+    if (existsSync(offsetFile)) {
+      startAfter = readFileSync(offsetFile, 'utf8');
+    }
     const limit = 500;
     let done = false;
     while (!done) {
@@ -234,6 +238,7 @@ async function main() {
         .limit(limit)
         .get();
       console.log('================ START AFTER ===============', startAfter, colls.size);
+      writeFileSync(offsetFile, `${startAfter}`);
 
       // update cursor
       startAfter = colls.docs[colls.size - 1].get('address');
