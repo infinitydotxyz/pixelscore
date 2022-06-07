@@ -42,15 +42,15 @@ async function processOneSplit(dirPath: string, split: string) {
     for (const line of lines) {
       const [
         serialNum,
-        useLessCol1,
-        useLessCol2,
-        useLessCol3,
+        uselessCol1,
+        uselessCol2,
+        uselessCol3,
         collectionAddress,
         tokenId,
         globalPixelScore,
         inCollectionPixelRank,
-        useLessCol4,
-        useLessCol5,
+        uselessCol4,
+        uselessCol5,
         imageUrl,
         globalPixelRankBucket
       ] = line.split(',');
