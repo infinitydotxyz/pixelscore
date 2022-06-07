@@ -223,7 +223,7 @@ async function main() {
   } else {
     // fetch collections from firestore
     console.log('============================== Fetching collections from firestore =================================');
-    let startAfter = '0x1aba27d6a420feb25af6cf6b80b93b7526725a71';
+    let startAfter = '';
     const offsetFile = path.join(__dirname, 'offset.txt');
     if (existsSync(offsetFile)) {
       startAfter = readFileSync(offsetFile, 'utf8');
