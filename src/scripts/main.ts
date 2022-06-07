@@ -21,18 +21,7 @@ const IMAGES_DIR = 'resized';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE_NAME = 'metadata.csv';
 
-// const origRetries = 0;
-// interface PixelScore {
-//   pixelScore: number;
-// }
-
-// not used
-// async function saveScore(chainId: string, collection: string, tokenId: string, score: PixelScore) {
-//   const tokenDoc = db.collection('collections').doc(`${chainId}:${collection}`).collection('nfts').doc(tokenId);
-//   tokenDoc.set(score, { merge: true }).catch((err) => {
-//     console.error('Error saving pixel score for', chainId, collection, tokenId, err);
-//   });
-// }
+const origRetries = 0;
 
 async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number) {
   for (const coll of colls.docs) {
@@ -49,20 +38,20 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   console.log(
     `============ Fetching data for ${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
   );
-  // const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
+  const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
   // check if collection is already downloaded to local file system
-  // const collectionDir = path.join(__dirname, DATA_DIR, address);
-  // if (retries === origRetries && existsSync(collectionDir)) {
-  //   console.log('Collection', address, 'already downloaded. Skipping for now');
-  //   return;
-  // }
+  const collectionDir = path.join(__dirname, DATA_DIR, address);
+  if (retries === origRetries && existsSync(collectionDir)) {
+    console.log('Collection', address, 'already downloaded. Skipping for now');
+    return;
+  }
 
   // check if collection indexing is complete
-  // const status = collectionDoc?.data()?.state.create.step;
-  // if (status !== 'complete') {
-  //   console.error('Collection indexing is not complete for', address);
-  //   return;
-  // }
+  const status = collectionDoc?.data()?.state.create.step;
+  if (status !== 'complete') {
+    console.error('Collection indexing is not complete for', address);
+    return;
+  }
   console.log(
     `============================== Fetching tokens from firestore for ${address} =================================`
   );
@@ -210,18 +199,18 @@ async function sleep(duration: number): Promise<void> {
 
 async function main() {
   console.log(
-    'Usage for all collections: node index.js <optional: number of retries (default 3)> <optional: retry after seconds (default 60)>'
+    'Usage for all collections: node main.js <optional: number of retries (default 3)> <optional: retry after seconds (default 60)>'
   );
   console.log(
-    'Usage for individual collection: node index.js <number of retries (maybe 3?)> <retry after seconds (maybe 60?)> <chainId> <collectionAddress>'
+    'Usage for individual collection: node main.js <number of retries (maybe 3?)> <retry after seconds (maybe 60?)> <chainId> <collectionAddress>'
   );
   let retries = parseInt(process.argv[2]);
   if (!retries) {
-    retries = 3;
+    retries = origRetries;
   }
   let retryAfter = parseInt(process.argv[3]);
   if (!retryAfter) {
-    retryAfter = 30;
+    retryAfter = 20;
   }
 
   let chainId, address;
@@ -235,7 +224,7 @@ async function main() {
     // fetch completed collections from firestore
     console.log('============================== Fetching collections from firestore =================================');
     let startAfter = '';
-    const limit = 300;
+    const limit = 500;
     let done = false;
     while (!done) {
       const colls = await db
