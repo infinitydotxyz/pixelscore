@@ -1,4 +1,5 @@
 import { Erc721Metadata, RefreshTokenErrorJson, RefreshTokenFlow, TokenStandard } from '@infinityxyz/lib/types/core';
+import { TokenInfo } from './main';
 export interface NftArray {
   data: Nft[];
   cursor: string;
@@ -59,19 +60,8 @@ export interface NftStateDto {
   metadata: NftStateMetadataDto;
 }
 
-export interface RankInfoArray {
-  data: RankInfo[];
+export interface TokenInfoArray {
+  data: TokenInfo[];
   cursor: string;
   hasNextPage: boolean;
-}
-
-export interface RankInfo {
-  chainId: string;
-  collectionAddress: string;
-  imageUrl: string;
-  inCollectionPixelRank?: number;
-  pixelRank?: number;
-  pixelRankBucket?: number;
-  pixelScore?: number;
-  tokenId: string;
 }

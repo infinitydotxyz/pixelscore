@@ -1,5 +1,5 @@
 import { INFURA_API_KEYS, METADATA_CONCURRENCY } from './constants';
-import got, { Got, Options, Response } from 'got/dist/source';
+import got, { Got, Options, Response } from 'got';
 import PQueue from 'p-queue';
 // import { detectContentType } from './sniff';
 import { randomItem } from './main';

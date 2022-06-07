@@ -1,6 +1,6 @@
 import { randomItem, sleep } from './main';
 import { OPENSEA_API_KEYS } from './constants';
-import got, { Got, Response } from 'got/dist/source';
+import got, { Got, Response } from 'got';
 import { gotErrorHandler } from './got';
 import { CollectionMetadata, TokenStandard } from '@infinityxyz/lib/types/core';
 import { ethers } from 'ethers';

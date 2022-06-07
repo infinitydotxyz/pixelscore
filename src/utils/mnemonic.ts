@@ -1,4 +1,4 @@
-import got, { Got, Response } from 'got/dist/source';
+import got, { Got, Response } from 'got';
 import { MNEMONIC_API_KEYS } from './constants';
 import { randomItem, sleep } from './main';
 import { gotErrorHandler } from './got';

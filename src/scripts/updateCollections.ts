@@ -1,38 +1,112 @@
-import { RankInfo } from 'types/firestore';
+import { TokenInfo } from 'types/main';
 import { COLLECTIONS_COLL, RANKINGS_COLL } from '../utils/constants';
 import { pixelScoreDb } from '../utils/firestore';
 import { getCollectionInfo } from './metadataUtils';
+import { CollectionInfo } from '../types/main';
+import { spawn, Thread, Worker } from 'threads';
+
+async function run() {
+  const worker = await spawn(new Worker('./workers/getCollectionWorker'));
+  const hashed = await worker.hashPassword('Super secret password', '1234');
+
+  console.log('Hashed password:', hashed);
+
+  await Thread.terminate(worker);
+}
 
 // run with:
+// "got": "11.8.5",
 // npx ts-node src/scripts/updateCollections.ts
 
-// 12) Do const collectionInfo = await getCollectionInfo(collection) from collectMetadata.ts.
-//  Dump this in collections collection with a doc id <1:$collectionAddress>. Also merge this to the <rankingsdoc> above
+let rankingCol: FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
+let collectionCol: FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData>;
+const collectionCache = new Map<string, CollectionInfo>();
 
-async function main() {
+function main() {
+  rankingCol = pixelScoreDb.collection(RANKINGS_COLL);
+  collectionCol = pixelScoreDb.collection(COLLECTIONS_COLL);
+
+  if (!collectionCol) {
+    update(true);
+  }
+  run();
+}
+main();
+
+// ===============================================================
+
+async function update(testRun: boolean) {
   console.log('Updating collections...');
-  console.log(COLLECTIONS_COLL);
-  let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
+  const limit = 1000;
+  let cursor = '';
+  let hasMore = true;
+  let count = 0;
 
-  nftsQuery = nftsQuery.limit(10);
+  while (hasMore) {
+    console.log(count);
 
-  const results = await nftsQuery.get();
-  const nfts = results.docs.map((item) => {
-    const rankInfo = item.data() as RankInfo;
+    let nftsQuery = rankingCol.limit(limit);
 
-    const tmp = rankInfo as any;
-    tmp.firebaseId = item.id;
+    if (cursor) {
+      const startDoc = await pixelScoreDb.doc(cursor).get();
+      nftsQuery = nftsQuery.startAfter(startDoc);
+    }
 
-    return rankInfo;
-  });
+    const results = await nftsQuery.get();
+    const tokenDocs = results.docs;
 
-  // console.log(nfts);
+    if (tokenDocs.length < limit) {
+      hasMore = false;
+    }
 
-  for (const nft of nfts) {
-    const collectionInfo = await getCollectionInfo(nft.collectionAddress);
+    for (const tokenDoc of tokenDocs) {
+      count++;
 
-    console.log(collectionInfo);
+      const tokenInfo = tokenDoc.data() as TokenInfo;
+
+      // last path is cursor for next call
+      cursor = tokenDoc.ref.path;
+
+      const collectionInfo = await _getCollectionInfo(tokenInfo.collectionAddress, testRun);
+
+      if (collectionInfo) {
+        // merge the collectionName and slug to rank col
+        const tokenInfo: Partial<TokenInfo> = {
+          collectionSlug: collectionInfo.slug,
+          collectionName: collectionInfo.name,
+          collectionImage: collectionInfo.bannerImage
+        };
+
+        if (testRun) {
+          // console.log(tokenInfo);
+        } else {
+          tokenDoc.ref.set(tokenInfo, { merge: true });
+        }
+      } else {
+        console.log(`missing: ${tokenInfo.collectionAddress}`);
+      }
+    }
   }
 }
 
-main();
+async function _getCollectionInfo(collectionAddress: string, testRun: boolean): Promise<CollectionInfo | undefined> {
+  let collectionInfo = collectionCache.get(collectionAddress);
+
+  if (!collectionInfo) {
+    collectionInfo = await getCollectionInfo(collectionAddress);
+
+    if (collectionInfo) {
+      collectionCache.set(collectionAddress, collectionInfo);
+
+      if (testRun) {
+        // console.log(collectionInfo);
+      } else {
+        collectionCol.doc(`1:${collectionAddress}`).set(collectionInfo);
+      }
+    }
+  } else {
+    console.log('######################## from cache');
+  }
+
+  return collectionInfo;
+}

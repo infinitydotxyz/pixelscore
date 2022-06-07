@@ -10,7 +10,7 @@ import {
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
-import { ExternalNftArray, Nft, RankInfoArray, NftArray, RankInfo } from 'types/firestore';
+import { ExternalNftArray, Nft, TokenInfoArray, NftArray } from 'types/firestore';
 import { AlchemyAddressActivityWebHook, RevealOrder, TokenInfo, UpdateRankVisibility, UserRecord } from './types/main';
 import {
   CollectionQueryOptions,
@@ -856,7 +856,7 @@ async function getCollectionNfts2(
   maxRank: number,
   chainId?: string,
   collectionAddress?: string
-): Promise<RankInfoArray> {
+): Promise<TokenInfoArray> {
   const rankRange = [...Array(maxRank - minRank + 1).keys()].map((x) => x + minRank);
 
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
@@ -883,7 +883,7 @@ async function getCollectionNfts2(
   const results = await nftsQuery.get();
   const paths: string[] = [];
   const data = results.docs.map((item) => {
-    const rankInfo = item.data() as RankInfo;
+    const rankInfo = item.data() as TokenInfo;
 
     paths.push(item.ref.path);
 
