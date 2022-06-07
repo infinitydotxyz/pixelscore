@@ -9,7 +9,7 @@ import OpenSeaClient from '../utils/opensea';
 import MetadataClient from '../utils/metadata';
 
 const finished = promisify(stream.finished);
-const DATA_DIR = 'data';
+const DATA_DIR = '/mnt/disks/additional-disk/data';
 // const ERC1155_DATA_DIR = 'data_erc1155';
 // const MNEMONIC_DATA_DIR = 'mnemonic_data';
 const IMAGES_DIR = 'resized';
@@ -130,7 +130,7 @@ async function buildCollection(address: string, tokensOffset = 0) {
   try {
     console.log(`============================== Building collection ${address} =================================`);
     // check if collection is already downloaded to local file system
-    // const collectionDir = path.join(__dirname, DATA_DIR, address);
+    // const collectionDir = path.join(DATA_DIR, address);
     // if (existsSync(collectionDir)) {
     //   console.log('Collection', address, 'already downloaded. Skipping for now');
     //   return;
@@ -143,7 +143,7 @@ async function buildCollection(address: string, tokensOffset = 0) {
       return;
     }
     console.log(`Found ${tokens.length} tokens for ${address}`);
-    const resizedImagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
+    const resizedImagesDir = path.join(DATA_DIR, address, IMAGES_DIR);
     // fetch tokens that don't have images
     const imageLessTokens: Token[] = [];
     for (const token of tokens) {

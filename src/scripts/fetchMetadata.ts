@@ -10,7 +10,7 @@ fbAdmin.initializeApp({
 });
 
 const db = fbAdmin.firestore();
-const DATA_DIR = 'data';
+const DATA_DIR = '/mnt/disks/additional-disk/data';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE_NAME = 'metadata.csv';
 
@@ -41,7 +41,7 @@ async function run(chainId: string, address: string) {
     return;
   }
 
-  const metadataDir = path.join(__dirname, DATA_DIR, address, METADATA_DIR);
+  const metadataDir = path.join(DATA_DIR, address, METADATA_DIR);
   const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
   if (existsSync(metadataFile)) {
     console.log('Metadata file already exists for', chainId, address);

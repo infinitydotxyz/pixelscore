@@ -1,11 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-const DATA_DIR = 'data';
+
+const DATA_DIR = '/mnt/disks/additional-disk/data';
 
 let count = 0;
 function main() {
   console.log('Counting images...');
-  getDirs(path.join(__dirname, DATA_DIR));
+  getDirs(DATA_DIR);
   console.log('Found', count, 'images');
 }
 

@@ -10,14 +10,14 @@ import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
 import { getCollectionInfo } from './metadataUtils';
 
 const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
-const DATA_DIR = 'data';
+const DATA_DIR = '/mnt/disks/additional-disk/data';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE = 'metadata.csv';
 const COLLECTION_COMPLETE_FILE = 'collection-complete.txt';
 
 async function main() {
   console.log('Collecting data...');
-  const dirPath = path.join(__dirname, DATA_DIR);
+  const dirPath = DATA_DIR;
   // await processCollections(dirPath);
   await processOneCollection(dirPath, '0xbc4ca0eda7647a8ab7c2061c2e118a18a936f13d');
 }

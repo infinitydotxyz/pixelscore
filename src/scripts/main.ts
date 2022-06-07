@@ -16,7 +16,7 @@ fbAdmin.initializeApp({
 const db = fbAdmin.firestore();
 // const bucket = fbAdmin.storage().bucket();
 const finished = promisify(stream.finished);
-const DATA_DIR = 'data';
+const DATA_DIR = '/mnt/disks/additional-disk/data';
 const IMAGES_DIR = 'resized';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE_NAME = 'metadata.csv';
@@ -40,7 +40,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   );
   const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
   // check if collection is already downloaded to local file system
-  const collectionDir = path.join(__dirname, DATA_DIR, address);
+  const collectionDir = path.join(DATA_DIR, address);
   if (retries === origRetries && existsSync(collectionDir)) {
     console.log('Collection', address, 'already downloaded. Skipping for now');
     return;
@@ -59,11 +59,11 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   const numTokens = tokens.size;
 
   // fetch metadata
-  const metadataDir = path.join(__dirname, DATA_DIR, address, METADATA_DIR);
+  const metadataDir = path.join(DATA_DIR, address, METADATA_DIR);
   fetchMetadata(tokens, metadataDir);
 
   // fetch images
-  const resizedImagesDir = path.join(__dirname, DATA_DIR, address, IMAGES_DIR);
+  const resizedImagesDir = path.join(DATA_DIR, address, IMAGES_DIR);
   await fetchOSImages(address, tokens, resizedImagesDir);
 
   // validate

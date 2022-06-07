@@ -2,7 +2,7 @@ import path from 'path';
 import { appendFileSync, readdirSync, readFileSync, existsSync, statSync } from 'fs';
 import { execSync } from 'child_process';
 
-const DATA_DIR = 'data';
+const DATA_DIR = '/mnt/disks/additional-disk/data';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE = 'metadata.csv';
 const IMAGES_DIR = 'resized';
@@ -10,7 +10,7 @@ const DUMMY_RARITY = '-123';
 
 function main() {
   console.log('Creating metadata files...');
-  createMetadataFiles(path.join(__dirname, DATA_DIR));
+  createMetadataFiles(DATA_DIR);
 }
 
 function createMetadataFiles(dirPath: string) {
