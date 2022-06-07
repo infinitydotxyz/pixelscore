@@ -54,24 +54,28 @@ async function update(testRun: boolean) {
       // last path is cursor for next call
       cursor = tokenDoc.ref.path;
 
-      const collectionInfo = await _getCollectionInfo(tokenInfo.collectionAddress, testRun);
+      try {
+        const collectionInfo = await _getCollectionInfo(tokenInfo.collectionAddress, testRun);
 
-      if (collectionInfo) {
-        // merge the collectionName and slug to rank col
-        const tokenInfo: Partial<TokenInfo> = {
-          collectionSlug: collectionInfo.slug,
-          collectionName: collectionInfo.name,
-          collectionBannerImage: collectionInfo.bannerImage,
-          collectionProfileImage: collectionInfo.profileImage
-        };
+        if (collectionInfo) {
+          // merge the collectionName and slug to rank col
+          const tokenInfo: Partial<TokenInfo> = {
+            collectionSlug: collectionInfo.slug,
+            collectionName: collectionInfo.name,
+            collectionBannerImage: collectionInfo.bannerImage,
+            collectionProfileImage: collectionInfo.profileImage
+          };
 
-        if (testRun) {
-          console.log(tokenInfo);
+          if (testRun) {
+            console.log(tokenInfo);
+          } else {
+            tokenDoc.ref.set(tokenInfo, { merge: true });
+          }
         } else {
-          tokenDoc.ref.set(tokenInfo, { merge: true });
+          console.log(`missing: ${tokenInfo.collectionAddress}`);
         }
-      } else {
-        console.log(`missing: ${tokenInfo.collectionAddress}`);
+      } catch (err) {
+        console.log(`error catch: $err`);
       }
     }
   }
