@@ -3,16 +3,6 @@ import { COLLECTIONS_COLL, RANKINGS_COLL } from '../utils/constants';
 import { pixelScoreDb } from '../utils/firestore';
 import { getCollectionInfo } from './metadataUtils';
 import { CollectionInfo } from '../types/main';
-import { spawn, Thread, Worker } from 'threads';
-
-async function run() {
-  const worker = await spawn(new Worker('./workers/getCollectionWorker'));
-  const hashed = await worker.hashPassword('Super secret password', '1234');
-
-  console.log('Hashed password:', hashed);
-
-  await Thread.terminate(worker);
-}
 
 // run with:
 // "got": "11.8.5",
@@ -26,10 +16,7 @@ function main() {
   rankingCol = pixelScoreDb.collection(RANKINGS_COLL);
   collectionCol = pixelScoreDb.collection(COLLECTIONS_COLL);
 
-  if (!collectionCol) {
-    update(true);
-  }
-  run();
+  update(false);
 }
 main();
 
@@ -74,11 +61,12 @@ async function update(testRun: boolean) {
         const tokenInfo: Partial<TokenInfo> = {
           collectionSlug: collectionInfo.slug,
           collectionName: collectionInfo.name,
-          collectionImage: collectionInfo.bannerImage
+          collectionBannerImage: collectionInfo.bannerImage,
+          collectionProfileImage: collectionInfo.profileImage
         };
 
         if (testRun) {
-          // console.log(tokenInfo);
+          console.log(tokenInfo);
         } else {
           tokenDoc.ref.set(tokenInfo, { merge: true });
         }
@@ -90,22 +78,25 @@ async function update(testRun: boolean) {
 }
 
 async function _getCollectionInfo(collectionAddress: string, testRun: boolean): Promise<CollectionInfo | undefined> {
-  let collectionInfo = collectionCache.get(collectionAddress);
+  const address = collectionAddress.trim().toLowerCase();
+  let collectionInfo = collectionCache.get(address);
 
   if (!collectionInfo) {
-    collectionInfo = await getCollectionInfo(collectionAddress);
+    collectionInfo = await getCollectionInfo(address);
 
     if (collectionInfo) {
-      collectionCache.set(collectionAddress, collectionInfo);
+      collectionCache.set(address, collectionInfo);
 
       if (testRun) {
-        // console.log(collectionInfo);
+        console.log(collectionInfo);
       } else {
-        collectionCol.doc(`1:${collectionAddress}`).set(collectionInfo);
+        collectionCol.doc(`1:${address}`).set(collectionInfo);
       }
+    } else {
+      console.log(`### Error getCollectionInfo: ${address}`);
     }
   } else {
-    console.log('######################## from cache');
+    console.log('### from cache');
   }
 
   return collectionInfo;

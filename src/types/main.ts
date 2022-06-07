@@ -18,7 +18,8 @@ export interface TokenInfo {
   chainId: string;
   collectionAddress: string;
   collectionName?: string;
-  collectionImage?: string;
+  collectionBannerImage?: string;
+  collectionProfileImage?: string;
   collectionSlug?: string;
   tokenId: string;
   imageUrl: string;
