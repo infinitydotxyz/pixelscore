@@ -38,7 +38,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   console.log(
     `============ Fetching data for ${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
   );
-  const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
+  // const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
   // check if collection is already downloaded to local file system
   const collectionDir = path.join(DATA_DIR, address);
   if (retries === origRetries && existsSync(collectionDir)) {
@@ -47,11 +47,11 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   }
 
   // check if collection indexing is complete
-  const status = collectionDoc?.data()?.state.create.step;
-  if (status !== 'complete') {
-    console.error('Collection indexing is not complete for', address);
-    return;
-  }
+  // const status = collectionDoc?.data()?.state.create.step;
+  // if (status !== 'complete') {
+  //   console.error('Collection indexing is not complete for', address);
+  //   return;
+  // }
   console.log(
     `============================== Fetching tokens from firestore for ${address} =================================`
   );
@@ -221,7 +221,7 @@ async function main() {
     address = process.argv[5].trim().toLowerCase();
     await run(chainId, address, retries, retryAfter);
   } else {
-    // fetch completed collections from firestore
+    // fetch collections from firestore
     console.log('============================== Fetching collections from firestore =================================');
     let startAfter = '';
     const limit = 500;
