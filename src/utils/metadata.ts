@@ -130,7 +130,7 @@ export default class MetadataClient {
         const decodedMetadata = rawBody.toString('ascii');
 
         const res: Pick<Response<string>, 'requestUrl' | 'statusCode' | 'url' | 'body' | 'rawBody'> = {
-          requestUrl: url,
+          requestUrl: url.toString(),
           statusCode: 200,
           url: rawUrl,
           body: decodedMetadata,
