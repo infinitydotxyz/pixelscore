@@ -21,7 +21,7 @@ const IMAGES_DIR = 'resized';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE_NAME = 'metadata.csv';
 
-const origRetries = 0;
+const origRetries = 3;
 
 async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number) {
   for (const coll of colls.docs) {
@@ -40,11 +40,11 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   );
   // const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
   // check if collection is already downloaded to local file system
-  const collectionDir = path.join(DATA_DIR, address);
-  if (retries === origRetries && existsSync(collectionDir)) {
-    console.log('Collection', address, 'already downloaded. Skipping for now');
-    return;
-  }
+  // const collectionDir = path.join(DATA_DIR, address);
+  // if (retries === origRetries && existsSync(collectionDir)) {
+  //   console.log('Collection', address, 'already downloaded. Skipping for now');
+  //   return;
+  // }
 
   // check if collection indexing is complete
   // const status = collectionDoc?.data()?.state.create.step;
