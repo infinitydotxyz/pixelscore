@@ -32,6 +32,7 @@ main();
 // rankings/28a96f6da7c0c16377ff717628d7cba873bae182fd26a0641747095e2e546a75
 // rankings/2905765a991a18628511be15295cdb1b7d2c2d3178a87eee800c9c3615270e38
 // rankings/3fce2eb78ebaba2667499f34e29016f67c942083cc0a9c73c2be4e35426f3e44
+// last one when finished: rankings/ffd0a19367597da7a04abcdac8f2c0d1b31f8b0add5156735d84b3bb2da21083
 async function update(testRun: boolean) {
   console.log('Updating collections...');
   const limit = 10000;
