@@ -4,6 +4,7 @@ import { pixelScoreDb } from '../utils/firestore';
 import { getCollectionInfo } from './metadataUtils';
 import { CollectionInfo } from '../types/main';
 import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
+import { getCollectionDocId } from '@infinityxyz/lib/utils';
 
 // run with:
 // "got": "11.8.5",
@@ -104,7 +105,8 @@ async function _getCollectionInfo(collectionAddress: string, testRun: boolean): 
   let collectionInfo = collectionCache.get(address);
 
   if (!collectionInfo) {
-    collectionInfo = (await collectionCol.doc(`1:${address}`).get()).data() as CollectionInfo;
+    const docId = getCollectionDocId({ collectionAddress, chainId: '1' });
+    collectionInfo = (await collectionCol.doc(docId).get()).data() as CollectionInfo;
 
     if (collectionInfo) {
       collectionCache.set(address, collectionInfo);
@@ -117,7 +119,7 @@ async function _getCollectionInfo(collectionAddress: string, testRun: boolean): 
         if (testRun) {
           console.log(collectionInfo);
         } else {
-          collectionCol.doc(`1:${address}`).set(collectionInfo);
+          collectionCol.doc(docId).set(collectionInfo);
         }
       } else {
         console.log(`### Error getCollectionInfo: ${address}`);
