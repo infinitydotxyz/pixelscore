@@ -20,6 +20,8 @@ export interface Nft {
   collectionAddress?: string;
   collectionSlug?: string;
   collectionName?: string;
+  collectionBannerImage?: string;
+  collectionProfileImage?: string;
   hasBlueCheck?: boolean;
   chainId: string;
   slug: string;
