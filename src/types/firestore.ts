@@ -1,5 +1,5 @@
 import { Erc721Metadata, RefreshTokenErrorJson, RefreshTokenFlow, TokenStandard } from '@infinityxyz/lib/types/core';
-import { TokenInfo } from './main';
+import { CollectionInfo, TokenInfo } from './main';
 export interface NftArray {
   data: Nft[];
   cursor: string;
@@ -62,6 +62,12 @@ export interface NftStateDto {
 
 export interface TokenInfoArray {
   data: TokenInfo[];
+  cursor: string;
+  hasNextPage: boolean;
+}
+
+export interface CollectionInfoArray {
+  data: CollectionInfo[];
   cursor: string;
   hasNextPage: boolean;
 }

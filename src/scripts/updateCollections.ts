@@ -31,10 +31,11 @@ main();
 // rankings/25396e45ea809999e8acdc889b79ee9ea93bb34437723f2ed444740762700cf1
 // rankings/28a96f6da7c0c16377ff717628d7cba873bae182fd26a0641747095e2e546a75
 // rankings/2905765a991a18628511be15295cdb1b7d2c2d3178a87eee800c9c3615270e38
+// rankings/3fce2eb78ebaba2667499f34e29016f67c942083cc0a9c73c2be4e35426f3e44
 async function update(testRun: boolean) {
   console.log('Updating collections...');
-  const limit = 5000;
-  let cursor = 'rankings/2905765a991a18628511be15295cdb1b7d2c2d3178a87eee800c9c3615270e38';
+  const limit = 10000;
+  let cursor = 'rankings/3fce2eb78ebaba2667499f34e29016f67c942083cc0a9c73c2be4e35426f3e44';
   let hasMore = true;
   let count = 0;
 

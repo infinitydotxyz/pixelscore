@@ -10,8 +10,15 @@ import {
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
-import { ExternalNftArray, Nft, TokenInfoArray, NftArray } from 'types/firestore';
-import { AlchemyAddressActivityWebHook, RevealOrder, TokenInfo, UpdateRankVisibility, UserRecord } from './types/main';
+import { ExternalNftArray, Nft, TokenInfoArray, NftArray, CollectionInfoArray } from 'types/firestore';
+import {
+  AlchemyAddressActivityWebHook,
+  CollectionInfo,
+  RevealOrder,
+  TokenInfo,
+  UpdateRankVisibility,
+  UserRecord
+} from './types/main';
 import {
   CollectionQueryOptions,
   CollectionSearchQuery,
@@ -35,7 +42,8 @@ import {
   REVEALS_ITEMS_SUB_COLL,
   REVEAL_ITEMS_LIMIT,
   WEBHOOK_EVENTS_COLL,
-  USERS_COLL
+  USERS_COLL,
+  COLLECTIONS_COLL
 } from './utils/constants';
 import { infinityDb, pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
@@ -54,6 +62,13 @@ const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 // ========================================= GET REQUESTS =========================================
 
 // ################################# Public endpoints #################################
+
+app.get('/collections', async (req: Request, res: Response) => {
+  const query = req.query as unknown as NftsQuery;
+
+  const data = await getCollections(query);
+  res.send(data);
+});
 
 app.get('/collections/search', async (req: Request, res: Response) => {
   const search = req.query as CollectionSearchQuery;
@@ -847,6 +862,37 @@ function alchemyNetworkToChainId(network: string) {
 function defaultCollectionQueryOptions(): CollectionQueryOptions {
   return {
     limitToCompleteCollections: true
+  };
+}
+
+async function getCollections(query: NftsQuery): Promise<CollectionInfoArray> {
+  let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(COLLECTIONS_COLL);
+
+  // nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
+
+  if (query.cursor) {
+    const startDoc = await pixelScoreDb.doc(query.cursor).get();
+    nftsQuery = nftsQuery.startAfter(startDoc);
+  }
+
+  nftsQuery = nftsQuery.limit(query.limit);
+
+  let cursor = '';
+  const results = await nftsQuery.get();
+  const data = results.docs.map((item) => {
+    const collection = item.data() as CollectionInfo;
+
+    cursor = item.ref.path;
+
+    return collection;
+  });
+
+  const hasNextPage = data.length === query.limit;
+
+  return {
+    data,
+    cursor: cursor,
+    hasNextPage
   };
 }
 
