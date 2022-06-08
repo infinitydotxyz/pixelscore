@@ -44,7 +44,7 @@ import {
   USERS_COLL,
   COLLECTIONS_COLL
 } from './utils/constants';
-import { infinityDb, pixelScoreDb } from './utils/firestore';
+import { pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
 import { getPageUserNftsFromAlchemy } from './utils/alchemy';
@@ -73,7 +73,7 @@ app.get('/collections/search', async (req: Request, res: Response) => {
   const search = req.query as CollectionSearchQuery;
 
   const limit = search.limit ?? DEFAULT_PAGE_LIMIT;
-  let firestoreQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = infinityDb.collection(
+  let firestoreQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(
     firestoreConstants.COLLECTIONS_COLL
   );
 
@@ -94,31 +94,12 @@ app.get('/collections/search', async (req: Request, res: Response) => {
   }
 
   const snapshot = await firestoreQuery
-    .select(
-      'address',
-      'chainId',
-      'slug',
-      'metadata.name',
-      'metadata.profileImage',
-      'metadata.description',
-      'metadata.bannerImage',
-      'hasBlueCheck'
-    )
     .limit(limit + 1) // +1 to check if there are more results
     .get();
 
   const collections = snapshot.docs.map((doc) => {
     const data = doc.data();
-    return {
-      address: data.address as string,
-      chainId: data.chainId as string,
-      slug: data.slug as string,
-      name: data.metadata?.name as string,
-      hasBlueCheck: data.hasBlueCheck as boolean,
-      profileImage: data.metadata?.profileImage as string,
-      bannerImage: data.metadata?.bannerImage as string,
-      description: data.metadata?.description as string
-    };
+    return data;
   });
 
   const hasNextPage = collections.length > limit;
