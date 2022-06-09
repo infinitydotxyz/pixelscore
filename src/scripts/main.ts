@@ -228,7 +228,7 @@ async function main() {
     if (existsSync(offsetFile)) {
       startAfter = readFileSync(offsetFile, 'utf8');
     }
-    const limit = 500;
+    const limit = 20;
     let done = false;
     while (!done) {
       const colls = await db
