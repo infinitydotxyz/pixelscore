@@ -52,6 +52,11 @@ async function run(chainId: string, address: string, retries: number, retryAfter
   //   console.error('Collection indexing is not complete for', address);
   //   return;
   // }
+
+  // exception for ENS
+  if (address === '0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85') {
+    return;
+  }
   console.log(
     `============================== Fetching tokens from firestore for ${address} =================================`
   );
