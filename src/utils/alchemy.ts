@@ -4,7 +4,7 @@ import { BigNumber } from 'ethers';
 import { normalize } from 'path';
 import { AlchemyNft, AlchemyUserNftsResponse } from 'types/alchemy';
 import { Nft } from 'types/firestore';
-import { getNftsFromInfinityFirestore } from './infinity';
+import { getNftsFromPixelStoreFirestore } from './pixelstore';
 
 const client: AxiosInstance = axios.create();
 
@@ -70,7 +70,7 @@ export async function transformAlchemyNftToPixelScoreNft(
       tokenId: BigNumber.from(item.alchemyNft.id.tokenId).toString()
     };
   });
-  const nfts = await getNftsFromInfinityFirestore(nftRefProps);
+  const nfts = await getNftsFromPixelStoreFirestore(nftRefProps);
 
   return nfts.map((nftDto, index) => {
     const { alchemyNft, chainId } = alchemyNfts[index];

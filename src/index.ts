@@ -1,7 +1,5 @@
-import { CreationFlow } from '@infinityxyz/lib/types/core';
 import {
   firestoreConstants,
-  getCollectionDocId,
   getEndCode,
   getSearchFriendlyString,
   jsonString,
@@ -22,7 +20,6 @@ import {
 import {
   CollectionQueryOptions,
   CollectionSearchQuery,
-  NftQuery,
   NftRankQuery,
   NftsQuery,
   PortfolioScore,
@@ -48,7 +45,7 @@ import { pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
 import { getPageUserNftsFromAlchemy } from './utils/alchemy';
-import { getCollectionByAddress, getNftsFromInfinityFirestore, isCollectionSupported } from './utils/infinity';
+import { getCollectionByAddress, isCollectionSupported } from './utils/infinity';
 import { startServer } from './server';
 import bodyParser from 'body-parser';
 
@@ -151,31 +148,32 @@ app.get('/collections/nfts', async (req: Request, res: Response) => {
   res.send(data);
 });
 
-app.get('/collections/:chainId/:collectionAddress/nfts/:tokenId', async (req: Request, res: Response) => {
-  const nftQuery = req.query as unknown as NftQuery;
-  const chainId = nftQuery.chainId as string;
-  const collectionAddress = trimLowerCase(nftQuery.address);
-  const collection = await getCollectionByAddress(chainId, collectionAddress, defaultCollectionQueryOptions());
+// TODO: is this being used?  This gets info from the infinitydb
+// app.get('/collections/:chainId/:collectionAddress/nfts/:tokenId', async (req: Request, res: Response) => {
+//   const nftQuery = req.query as unknown as NftQuery;
+//   const chainId = nftQuery.chainId as string;
+//   const collectionAddress = trimLowerCase(nftQuery.address);
+//   const collection = await getCollectionByAddress(chainId, collectionAddress, defaultCollectionQueryOptions());
 
-  if (collection) {
-    const collectionDocId = getCollectionDocId({
-      collectionAddress: collection.address,
-      chainId: collection.chainId
-    });
+//   if (collection) {
+//     const collectionDocId = getCollectionDocId({
+//       collectionAddress: collection.address,
+//       chainId: collection.chainId
+//     });
 
-    if (collection?.state?.create?.step !== CreationFlow.Complete || !collectionDocId) {
-      return undefined;
-    }
+//     if (collection?.state?.create?.step !== CreationFlow.Complete || !collectionDocId) {
+//       return undefined;
+//     }
 
-    const nfts = await getNftsFromInfinityFirestore([
-      { address: collection.address, chainId: collection.chainId, tokenId: nftQuery.tokenId }
-    ]);
+//     const nfts = await getNftsFromInfinityFirestore([
+//       { address: collection.address, chainId: collection.chainId, tokenId: nftQuery.tokenId }
+//     ]);
 
-    const nft = nfts?.[0];
-    res.send(nft);
-  }
-  res.sendStatus(404);
-});
+//     const nft = nfts?.[0];
+//     res.send(nft);
+//   }
+//   res.sendStatus(404);
+// });
 
 // ################################# User authenticated read endpoints #################################
 
