@@ -157,6 +157,8 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
 }
 
 async function downloadImage(url: string, outputLocationPath: string): Promise<any> {
+  // replace hack to handle changed opensea image url
+  url = url.replace('storage.opensea.io', 'openseauserdata.com');
   const writer = createWriteStream(outputLocationPath);
   return axios({
     method: 'get',
