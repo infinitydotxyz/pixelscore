@@ -184,7 +184,7 @@ async function validate(
   try {
     let done = false;
     console.log('============================== Validating =================================');
-    const numImages = readdirSync(imagesDir).length;
+    const numImages = readdirSync(imagesDir).filter((file) => !file.endsWith('.url') || !file.endsWith('.csv')).length;
     const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
     const numLines = parseInt(execSync(`cat ${metadataFile} | wc -l`).toString().trim());
     // check if num images downloaded is equal to numtokens
