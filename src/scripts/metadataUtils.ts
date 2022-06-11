@@ -37,15 +37,18 @@ export async function getCollectionInfoFromInfinity(collection: string): Promise
         chainId: '1',
         tokenStandard: 'ERC721',
         slug: data.slug,
-        name: data.metadata.name,
-        symbol: data.metadata.symbol,
-        description: data.metadata.description,
-        profileImage: data.metadata.profileImage,
-        bannerImage: data.metadata.bannerImage,
-        cardDisplaytype: data.metadata.displayType,
-        twitter: data.metadata.links.twitter,
-        discord: data.metadata.links.discord,
-        external: data.metadata.links.external
+        name: data.metadata?.name,
+        symbol: data.metadata?.symbol,
+        description: data.metadata?.description,
+        profileImage: data.metadata?.profileImage,
+        bannerImage: data.metadata?.bannerImage,
+        cardDisplaytype: data.metadata?.displayType,
+        twitter: data.metadata?.links.twitter,
+        discord: data.metadata?.links.discord,
+        external: data.metadata?.links.external,
+        hasBlueCheck: data.hasBlueCheck ?? false,
+        numNfts: data.numNfts ?? 0,
+        numOwners: data.numOwners ?? 0
       };
       return info;
     }
