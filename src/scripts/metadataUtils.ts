@@ -45,7 +45,10 @@ export async function getCollectionInfoFromInfinity(collection: string): Promise
         cardDisplaytype: data.metadata.displayType,
         twitter: data.metadata.links.twitter,
         discord: data.metadata.links.discord,
-        external: data.metadata.links.external
+        external: data.metadata.links.external,
+        hasBlueCheck: data.hasBlueCheck,
+        numNfts: data.numNfts,
+        numOwners: data.numOwners || 0
       };
       return info;
     }

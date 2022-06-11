@@ -4,6 +4,9 @@ export interface CollectionInfo {
   tokenStandard: string;
   slug: string;
   name: string;
+  hasBlueCheck?: boolean;
+  numNfts?: number;
+  numOwners?: number;
   symbol: string;
   description: string;
   profileImage: string;
