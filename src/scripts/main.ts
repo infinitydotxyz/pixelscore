@@ -21,7 +21,7 @@ const IMAGES_DIR = 'resized';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE_NAME = 'metadata.csv';
 
-const origRetries = 3;
+const origRetries = 1;
 
 async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number) {
   try {
