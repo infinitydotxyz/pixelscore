@@ -190,7 +190,7 @@ async function validate(
     const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
     const numLines = parseInt(execSync(`cat ${metadataFile} | wc -l`).toString().trim());
     // check if num images downloaded is equal to numtokens
-    if (numImages !== numTokens) {
+    if (numImages < numTokens) {
       console.error(
         'Not all images are downloaded; numTokens',
         numTokens,
