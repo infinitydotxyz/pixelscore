@@ -74,6 +74,8 @@ app.get('/collections/search', async (req: Request, res: Response) => {
     firestoreConstants.COLLECTIONS_COLL
   );
 
+  firestoreQuery = firestoreQuery.orderBy('hasBlueCheck', 'desc');
+
   if (search.query) {
     const startsWith = getSearchFriendlyString(search.query);
     const endCode = getEndCode(startsWith);
@@ -82,8 +84,6 @@ app.get('/collections/search', async (req: Request, res: Response) => {
       firestoreQuery = firestoreQuery.where('slug', '>=', startsWith).where('slug', '<', endCode);
     }
   }
-
-  firestoreQuery = firestoreQuery.orderBy('hasBlueCheck', 'desc');
   firestoreQuery = firestoreQuery.orderBy('slug');
 
   if (search.cursor) {
@@ -194,21 +194,31 @@ app.get('/u/:user/nfts', async (req: Request, res: Response) => {
 
 app.get('/u/:user/reveals', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
-  console.log('Fetching reveals for user', user);
-  const startAfterTimestamp = req.query.startAfterTimestamp ?? 0;
+  const cursor: string = (req.query.cursor as string) ?? '';
+  const isCompleted = req.query.isCompleted ?? false;
+
   try {
     let query = pixelScoreDb
       .collection(REVEALS_COLL)
       .where('revealer', '==', user)
       .where('chainId', '==', '1')
-      .limit(DEFAULT_PAGE_LIMIT)
-      .orderBy('timestamp', 'desc');
+      .where('txnStatus', isCompleted ? '==' : '!=', 'success')
+      .limit(DEFAULT_PAGE_LIMIT);
 
-    if (startAfterTimestamp > 0) {
-      query = query.startAfter(startAfterTimestamp);
+    // firebase complains on the != above
+    if (!isCompleted) {
+      query = query.orderBy('txnStatus');
+    }
+
+    query = query.orderBy('timestamp', 'desc');
+
+    if (cursor) {
+      const startDoc = await pixelScoreDb.doc(cursor).get();
+      query = query.startAfter(startDoc);
     }
 
     const revealSnap = await query.get();
+    let nextCursor = '';
 
     const resp: RevealOrder[] = [];
     for (const revealDoc of revealSnap.docs) {
@@ -220,11 +230,18 @@ app.get('/u/:user/reveals', async (req: Request, res: Response) => {
       const revealItemsSnap = await revealDoc.ref.collection(REVEALS_ITEMS_SUB_COLL).get();
       for (const revealItemDoc of revealItemsSnap.docs) {
         const revealItemDocData = revealItemDoc.data() as TokenInfo;
+
         revealDocData.revealItems.push(revealItemDocData);
       }
+
+      nextCursor = revealDoc.ref.path;
+
       resp.push(revealDocData);
     }
-    res.send(resp);
+
+    const hasNextPage = revealSnap.docs.length === DEFAULT_PAGE_LIMIT;
+
+    res.send({ data: resp, cursor: nextCursor, hasNextPage: hasNextPage });
   } catch (err) {
     console.error('Error while getting reveals for user', user, err);
     res.sendStatus(500);
@@ -805,6 +822,8 @@ async function getCollectionNfts(
   const rankRange = [...Array(maxRank - minRank + 1).keys()].map((x) => x + minRank);
 
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
+
+  nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
 
   if (collectionAddress) {
     nftsQuery = nftsQuery.where('collectionAddress', '==', collectionAddress);
