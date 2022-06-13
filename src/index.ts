@@ -43,7 +43,7 @@ import {
 } from './utils/constants';
 import { pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
-import { decodeCursor, decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
+import { decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
 import { getPageUserNftsFromAlchemy } from './utils/alchemy';
 import { getCollectionByAddress, isCollectionSupported } from './utils/infinity';
 import { startServer } from './server';
@@ -83,31 +83,30 @@ app.get('/collections/search', async (req: Request, res: Response) => {
     }
   }
 
+  firestoreQuery = firestoreQuery.orderBy('hasBlueCheck', 'desc');
   firestoreQuery = firestoreQuery.orderBy('slug');
 
-  const cursor = decodeCursor(search.cursor);
-  if (cursor) {
-    firestoreQuery = firestoreQuery.startAfter(cursor);
+  if (search.cursor) {
+    const startDoc = await pixelScoreDb.doc(search.cursor).get();
+    firestoreQuery = firestoreQuery.startAfter(startDoc);
   }
 
-  const snapshot = await firestoreQuery
-    .limit(limit + 1) // +1 to check if there are more results
-    .get();
+  const snapshot = await firestoreQuery.limit(limit).get();
 
+  let cursor = '';
   const collections = snapshot.docs.map((doc) => {
     const data = doc.data();
+
+    cursor = doc.ref.path;
+
     return data;
   });
 
-  const hasNextPage = collections.length > limit;
-  if (hasNextPage) {
-    collections.pop(); // Remove item used to check if there are more results
-  }
-  const updatedCursor = encodeCursor(collections?.[collections?.length - 1]?.slug ?? ''); // Must be after we pop the item used for pagination
+  const hasNextPage = collections.length === limit;
 
   res.send({
     data: collections,
-    cursor: updatedCursor,
+    cursor: cursor,
     hasNextPage
   });
 });
@@ -768,7 +767,7 @@ function defaultCollectionQueryOptions(): CollectionQueryOptions {
 async function getCollections(query: NftsQuery): Promise<CollectionInfoArray> {
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(COLLECTIONS_COLL);
 
-  // nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
+  nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
 
   if (query.cursor) {
     const startDoc = await pixelScoreDb.doc(query.cursor).get();
