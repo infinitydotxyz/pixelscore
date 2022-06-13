@@ -194,6 +194,7 @@ app.get('/u/:user/nfts', async (req: Request, res: Response) => {
 
 app.get('/u/:user/reveals', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
+  console.log('Fetching reveals for user', user);
   const cursor: string = (req.query.cursor as string) ?? '';
   const isCompleted = req.query.isCompleted ?? false;
 
@@ -688,7 +689,7 @@ async function getRevealData(
 
   if (rankingInfo.size === 1) {
     const rankingInfoData = rankingInfo.docs[0].data() as unknown as TokenInfo;
-    const rankData = {
+    const rankData: Partial<TokenInfo> = {
       inCollectionPixelScore: rankingInfoData?.inCollectionPixelScore,
       inCollectionPixelRank: rankingInfoData?.inCollectionPixelRank,
       pixelScore: rankingInfoData?.pixelScore,
