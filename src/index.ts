@@ -1,10 +1,4 @@
-import {
-  firestoreConstants,
-  getEndCode,
-  getSearchFriendlyString,
-  jsonString,
-  trimLowerCase
-} from '@infinityxyz/lib/utils';
+import { jsonString, trimLowerCase } from '@infinityxyz/lib/utils';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
@@ -48,6 +42,7 @@ import { getPageUserNftsFromAlchemy } from './utils/alchemy';
 import { getCollectionByAddress, isCollectionSupported } from './utils/infinity';
 import { startServer } from './server';
 import bodyParser from 'body-parser';
+import { searchCollections } from './utils/pixelstore';
 
 dotenv.config();
 
@@ -67,47 +62,33 @@ app.get('/collections', async (req: Request, res: Response) => {
 });
 
 app.get('/collections/search', async (req: Request, res: Response) => {
-  const search = req.query as CollectionSearchQuery;
+  const searchQuery = req.query as CollectionSearchQuery;
 
-  const limit = search.limit ?? DEFAULT_PAGE_LIMIT;
-  let firestoreQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(
-    firestoreConstants.COLLECTIONS_COLL
-  );
-
-  firestoreQuery = firestoreQuery.orderBy('hasBlueCheck', 'desc');
-
-  if (search.query) {
-    const startsWith = getSearchFriendlyString(search.query);
-    const endCode = getEndCode(startsWith);
-
-    if (startsWith && endCode) {
-      firestoreQuery = firestoreQuery.where('slug', '>=', startsWith).where('slug', '<', endCode);
-    }
-  }
-  firestoreQuery = firestoreQuery.orderBy('slug');
-
-  if (search.cursor) {
-    const startDoc = await pixelScoreDb.doc(search.cursor).get();
-    firestoreQuery = firestoreQuery.startAfter(startDoc);
+  let query = '';
+  if (searchQuery.query) {
+    // middleware will convert numbers in the query to a 'number'
+    // convert everything to a string (or the code will crash epecting a string)
+    query = searchQuery.query?.toString() ?? '';
   }
 
-  const snapshot = await firestoreQuery.limit(limit).get();
+  const limit = searchQuery.limit ?? DEFAULT_PAGE_LIMIT;
 
-  let cursor = '';
-  const collections = snapshot.docs.map((doc) => {
-    const data = doc.data();
+  // with firebase we were not able to first sort on bluecheck, then do a text search
+  // so we first search bluechecks, and if not enough results, search non bluechecks
+  const result = await searchCollections(query ?? '', searchQuery.cursor ?? '', true, limit);
 
-    cursor = doc.ref.path;
+  if (result.data.length < limit && !result.hasNextPage) {
+    const result2 = await searchCollections(query ?? '', searchQuery.cursor ?? '', false, limit);
 
-    return data;
-  });
-
-  const hasNextPage = collections.length === limit;
+    result.data = result.data.concat(result2.data);
+    result.cursor = result2.cursor;
+    result.hasNextPage = result2.hasNextPage;
+  }
 
   res.send({
-    data: collections,
-    cursor: cursor,
-    hasNextPage
+    data: result.data,
+    cursor: result.cursor,
+    hasNextPage: result.hasNextPage
   });
 });
 

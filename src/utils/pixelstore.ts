@@ -1,3 +1,4 @@
+import { firestoreConstants, getEndCode, getSearchFriendlyString } from '@infinityxyz/lib/utils';
 import { Nft } from 'types/firestore';
 import { RANKINGS_COLL } from './constants';
 import { pixelScoreDb } from './firestore';
@@ -27,4 +28,74 @@ export async function getNftsFromPixelStoreFirestore(nfts: { address: string; ch
   });
 
   return retrievedNfts;
+}
+
+// with firebase we were not able to first sort on bluecheck, then do a text search
+// so we first search bluechecks, and if not enough results, search non bluechecks
+export async function searchCollections(
+  query: string,
+  codedCursor: string,
+  hasBlueCheck: boolean,
+  limit: number
+): Promise<{
+  data: object[];
+  cursor: string;
+  hasNextPage: boolean;
+}> {
+  let cursor = '';
+
+  // cursor has a flag to mark if it's for bluechecks or not
+  if (codedCursor) {
+    const [flag, c] = codedCursor.split('::');
+    if ((flag === 'blue') !== hasBlueCheck) {
+      // bail out, this cursor isn't for this search
+      return {
+        data: [],
+        cursor: '',
+        hasNextPage: false
+      };
+    }
+
+    cursor = c;
+  }
+
+  let firestoreQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(
+    firestoreConstants.COLLECTIONS_COLL
+  );
+
+  firestoreQuery = firestoreQuery.where('hasBlueCheck', '==', hasBlueCheck);
+
+  if (query) {
+    const startsWith = getSearchFriendlyString(query);
+    const endCode = getEndCode(startsWith);
+
+    if (startsWith && endCode) {
+      firestoreQuery = firestoreQuery.where('slug', '>=', startsWith).where('slug', '<', endCode);
+    }
+  }
+  firestoreQuery = firestoreQuery.orderBy('slug');
+
+  if (cursor) {
+    const startDoc = await pixelScoreDb.doc(cursor).get();
+    firestoreQuery = firestoreQuery.startAfter(startDoc);
+  }
+
+  const snapshot = await firestoreQuery.limit(limit).get();
+
+  let newCursor = '';
+  const collections = snapshot.docs.map((doc) => {
+    const data = doc.data();
+
+    newCursor = doc.ref.path;
+
+    return data;
+  });
+
+  const hasNextPage = collections.length === limit;
+
+  return {
+    data: collections,
+    cursor: `${hasBlueCheck ? 'blue' : 'none'}::${newCursor}`,
+    hasNextPage
+  };
 }
