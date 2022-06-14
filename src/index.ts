@@ -816,7 +816,6 @@ async function getCollectionNfts(
   }
 
   nftsQuery = nftsQuery.where('pixelRankBucket', 'in', rankRange);
-
   nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
 
   if (query.cursor) {
@@ -824,29 +823,22 @@ async function getCollectionNfts(
     nftsQuery = nftsQuery.startAfter(startDoc);
   }
 
-  nftsQuery = nftsQuery.limit(query.limit + 1); // +1 to check if there are more events
+  nftsQuery = nftsQuery.limit(query.limit);
+  let cursor = '';
 
   const results = await nftsQuery.get();
-  const paths: string[] = [];
   const data = results.docs.map((item) => {
     const rankInfo = item.data() as TokenInfo;
 
-    paths.push(item.ref.path);
+    cursor = item.ref.path;
 
     return rankInfo;
   });
 
-  const hasNextPage = data.length > query.limit;
-  if (hasNextPage) {
-    data.pop();
-    paths.pop();
-  }
+  const hasNextPage = data.length === query.limit;
 
-  // cursor is path of last item
-  let cursor = '';
-  if (paths.length > 0) {
-    cursor = paths[paths.length - 1];
-  }
+  // remove rank information unless visible, or user is revealer
+  removeRankInfo(data);
 
   return {
     data,
@@ -854,6 +846,21 @@ async function getCollectionNfts(
     hasNextPage
   };
 }
+
+const removeRankInfo = (tokens: TokenInfo[]) => {
+  for (const token of tokens) {
+    if (!token.pixelRankVisible) {
+      // TODO: look up in reveal items, the token doesn't have the latest
+      delete token.pixelRank;
+      delete token.pixelScore;
+      delete token.pixelRankBucket;
+      delete token.inCollectionPixelRank;
+      delete token.inCollectionPixelScore;
+      delete token.rarityScore;
+      delete token.rarityRank;
+    }
+  }
+};
 
 const getPortfolioScore = async (userAddress: string, chainId: string): Promise<PortfolioScore> => {
   const limit = 10000 + 1; // +1 to check if there is a next page
