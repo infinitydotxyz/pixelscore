@@ -1,8 +1,8 @@
 import { TokenStandard } from '@infinityxyz/lib/types/core';
+import { AlchemyNft, AlchemyUserNftsResponse } from '@infinityxyz/lib/types/services/alchemy';
 import axios, { AxiosInstance } from 'axios';
 import { BigNumber } from 'ethers';
 import { normalize } from 'path';
-import { AlchemyNft, AlchemyUserNftsResponse } from 'types/alchemy';
 import { Nft } from 'types/firestore';
 import { getNftsFromPixelStoreFirestore } from './pixelstore';
 
