@@ -433,8 +433,7 @@ app.post('/u/:user/rankVisibility', async (req: Request, res: Response) => {
 
         // update the token
         const tokenInfo: Partial<TokenInfo> = {
-          pixelRankVisible: item.pixelRankVisible,
-          pixelRankRevealed: item.pixelRankVisible // not sure if what's syned to the tokeninfo, not sure if correct
+          pixelRankVisible: item.pixelRankVisible
         };
 
         updateTokenInfo(item.chainId, item.collectionAddress, item.tokenId, tokenInfo);
