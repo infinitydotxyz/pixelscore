@@ -1,5 +1,6 @@
 import { firestoreConstants, getEndCode, getSearchFriendlyString } from '@infinityxyz/lib/utils';
 import { Nft } from 'types/firestore';
+import { TokenInfo } from 'types/main';
 import { RANKINGS_COLL } from './constants';
 import { pixelScoreDb } from './firestore';
 import { getDocIdHash } from './main';
@@ -99,3 +100,48 @@ export async function searchCollections(
     hasNextPage
   };
 }
+
+export const getTokenInfo = async (
+  chainId: string,
+  collectionAddress: string,
+  tokenId: string
+): Promise<TokenInfo | undefined> => {
+  const tokenInfoSnapshot = await pixelScoreDb
+    .collection(RANKINGS_COLL)
+    .where('chainId', '==', chainId)
+    .where('collectionAddress', '==', collectionAddress)
+    .where('tokenId', '==', tokenId)
+    .get();
+
+  if (tokenInfoSnapshot.size === 1) {
+    return tokenInfoSnapshot.docs[0].data() as TokenInfo;
+  }
+};
+
+export const updateTokenInfo = async (
+  chainId: string,
+  collectionAddress: string,
+  tokenId: string,
+  tokenInfo: Partial<TokenInfo>
+) => {
+  const docId = getDocIdHash({
+    chainId: chainId,
+    collectionAddress: collectionAddress ?? '',
+    tokenId: tokenId
+  });
+
+  pixelScoreDb.doc(`${RANKINGS_COLL}/${docId}`).set(tokenInfo, { merge: true });
+
+  // alternate
+  // const tokenInfoSnapshot = await pixelScoreDb
+  //   .collection(RANKINGS_COLL)
+  //   .where('chainId', '==', chainId)
+  //   .where('collectionAddress', '==', collectionAddress)
+  //   .where('tokenId', '==', tokenId)
+  //   .get();
+
+  // if (tokenInfoSnapshot.size === 1) {
+  //   const doc = tokenInfoSnapshot.docs[0];
+  //   doc.ref.set(tokenInfo, { merge: true });
+  // }
+};

@@ -42,7 +42,7 @@ import { getPageUserNftsFromAlchemy } from './utils/alchemy';
 import { getCollectionByAddress, isCollectionSupported } from './utils/infinity';
 import { startServer } from './server';
 import bodyParser from 'body-parser';
-import { searchCollections } from './utils/pixelstore';
+import { getTokenInfo, searchCollections, updateTokenInfo } from './utils/pixelstore';
 
 dotenv.config();
 
@@ -127,33 +127,6 @@ app.get('/collections/nfts', async (req: Request, res: Response) => {
   const data = await getCollectionNfts(query, minRank, maxRank);
   res.send(data);
 });
-
-// TODO: is this being used?  This gets info from the infinitydb
-// app.get('/collections/:chainId/:collectionAddress/nfts/:tokenId', async (req: Request, res: Response) => {
-//   const nftQuery = req.query as unknown as NftQuery;
-//   const chainId = nftQuery.chainId as string;
-//   const collectionAddress = trimLowerCase(nftQuery.address);
-//   const collection = await getCollectionByAddress(chainId, collectionAddress, defaultCollectionQueryOptions());
-
-//   if (collection) {
-//     const collectionDocId = getCollectionDocId({
-//       collectionAddress: collection.address,
-//       chainId: collection.chainId
-//     });
-
-//     if (collection?.state?.create?.step !== CreationFlow.Complete || !collectionDocId) {
-//       return undefined;
-//     }
-
-//     const nfts = await getNftsFromInfinityFirestore([
-//       { address: collection.address, chainId: collection.chainId, tokenId: nftQuery.tokenId }
-//     ]);
-
-//     const nft = nfts?.[0];
-//     res.send(nft);
-//   }
-//   res.sendStatus(404);
-// });
 
 // ################################# User authenticated read endpoints #################################
 
@@ -457,6 +430,14 @@ app.post('/u/:user/rankVisibility', async (req: Request, res: Response) => {
       if (snap.size === 1) {
         const docRef = snap.docs[0].ref;
         pixelScoreDbBatchHandler.add(docRef, { pixelRankVisible: item.pixelRankVisible }, { merge: true });
+
+        // update the token
+        const tokenInfo: Partial<TokenInfo> = {
+          pixelRankVisible: item.pixelRankVisible,
+          pixelRankRevealed: item.pixelRankVisible // not sure if what's syned to the tokeninfo, not sure if correct
+        };
+
+        updateTokenInfo(item.chainId, item.collectionAddress, item.tokenId, tokenInfo);
       } else {
         console.error(
           'No reveal/more than one reveal found for',
@@ -668,21 +649,15 @@ async function getRevealData(
   collectionAddress: string,
   tokenId: string
 ): Promise<Partial<TokenInfo> | undefined> {
-  const rankingInfo = await pixelScoreDb
-    .collection(RANKINGS_COLL)
-    .where('chainId', '==', chainId)
-    .where('collectionAddress', '==', collectionAddress)
-    .where('tokenId', '==', tokenId)
-    .get();
+  const tokenInfo = await getTokenInfo(chainId, collectionAddress, tokenId);
 
-  if (rankingInfo.size === 1) {
-    const rankingInfoData = rankingInfo.docs[0].data() as unknown as TokenInfo;
+  if (tokenInfo) {
     const rankData: Partial<TokenInfo> = {
-      inCollectionPixelScore: rankingInfoData?.inCollectionPixelScore,
-      inCollectionPixelRank: rankingInfoData?.inCollectionPixelRank,
-      pixelScore: rankingInfoData?.pixelScore,
-      pixelRank: rankingInfoData?.pixelRank,
-      pixelRankBucket: rankingInfoData?.pixelRankBucket,
+      inCollectionPixelScore: tokenInfo?.inCollectionPixelScore,
+      inCollectionPixelRank: tokenInfo?.inCollectionPixelRank,
+      pixelScore: tokenInfo?.pixelScore,
+      pixelRank: tokenInfo?.pixelRank,
+      pixelRankBucket: tokenInfo?.pixelRankBucket,
       pixelRankRevealed: true,
       pixelRankVisible: false,
       pixelRankRevealer: revealer,
