@@ -559,10 +559,17 @@ async function addRankInfoToNFTs(nfts: Nft[]): Promise<Nft[]> {
         const ps = results[i].data();
 
         if (ps) {
+          // my notes said collectionName was missing. added here
+          n.collectionName = ps.collectionName;
+
           n.inCollectionPixelRank = ps.inCollectionPixelRank;
           n.pixelRank = ps.pixelRank;
           n.pixelRankBucket = ps.pixelRankBucket;
           n.pixelScore = ps.pixelScore;
+          n.pixelRankVisible = ps.pixelRankVisible;
+          n.pixelRankRevealer = ps.pixelRankRevealer;
+          n.pixelRankRevealed = ps.pixelRankRevealed;
+          n.inCollectionPixelScore = ps.inCollectionPixelScore;
 
           filtered.push(n);
         }

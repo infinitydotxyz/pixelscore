@@ -35,16 +35,22 @@ export interface Nft {
   numTraitTypes: number;
   updatedAt: number;
   tokenUri: string;
-  rarityRank: number;
-  rarityScore: number;
   image: NftImage;
   state?: NftStateDto;
   tokenStandard: TokenStandard;
   owner?: string;
+
+  rarityScore?: number;
+  rarityRank?: number;
+  inCollectionPixelScore?: number;
   inCollectionPixelRank?: number;
+  pixelScore?: number;
   pixelRank?: number;
   pixelRankBucket?: number;
-  pixelScore?: number;
+  pixelRankRevealed?: boolean;
+  pixelRankVisible?: boolean;
+  pixelRankRevealer?: string;
+  pixelRankRevealedAt?: number;
 }
 
 export interface NftImage {
