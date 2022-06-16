@@ -2,7 +2,7 @@ import { jsonString, trimLowerCase } from '@infinityxyz/lib/utils';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
-import { ExternalNftArray, Nft, TokenInfoArray, NftArray, CollectionInfoArray } from 'types/firestore';
+import { Nft, TokenInfoArray, NftArray, CollectionInfoArray } from 'types/firestore';
 import {
   AlchemyAddressActivityWebHook,
   CollectionInfo,
@@ -11,14 +11,7 @@ import {
   UpdateRankVisibility,
   UserRecord
 } from './types/main';
-import {
-  CollectionQueryOptions,
-  CollectionSearchQuery,
-  NftRankQuery,
-  NftsQuery,
-  PortfolioScore,
-  UserNftsQuery
-} from './types/apiQueries';
+import { CollectionSearchQuery, NftRankQuery, NftsQuery, PortfolioScore, UserNftsQuery } from './types/apiQueries';
 import {
   ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL,
   ALCHEMY_WEBHOOK_ASSET_ETH,
@@ -39,7 +32,6 @@ import { pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
 import { getPageUserNftsFromAlchemy } from './utils/alchemy';
-import { getCollectionByAddress, isCollectionSupported } from './utils/infinity';
 import { startServer } from './server';
 import bodyParser from 'body-parser';
 import { getTokenInfo, searchCollections, updateTokenInfo } from './utils/pixelstore';
@@ -92,14 +84,6 @@ app.get('/collections/search', async (req: Request, res: Response) => {
   });
 });
 
-app.get('/collections/:chainId/:collectionAddress', async (req: Request, res: Response) => {
-  const queryOptions = (req.query.options as unknown as CollectionQueryOptions) ?? defaultCollectionQueryOptions();
-  const collectionAddress = trimLowerCase(req.params.collectionAddress);
-  const chainId = req.params.chainId;
-  const data = await getCollectionByAddress(chainId, collectionAddress, queryOptions);
-  res.send(data);
-});
-
 app.get('/collections/:chainId/:collectionAddress/nfts-bottom', async (req: Request, res: Response) => {
   const chainId = req.params.chainId;
   const collectionAddress = trimLowerCase(req.params.collectionAddress);
@@ -137,11 +121,8 @@ app.get('/u/:user/nfts', async (req: Request, res: Response) => {
 
   const nfts = await getUserNfts(user, chainId, query);
 
-  const externalNfts = await isCollectionSupported(nfts.data);
-
-  const resp: ExternalNftArray = {
-    ...nfts,
-    data: externalNfts
+  const resp = {
+    ...nfts
   };
   res.send(resp);
 });
@@ -736,12 +717,6 @@ function alchemyNetworkToChainId(network: string) {
     default:
       return '0';
   }
-}
-
-function defaultCollectionQueryOptions(): CollectionQueryOptions {
-  return {
-    limitToCompleteCollections: true
-  };
 }
 
 async function getCollections(query: NftsQuery): Promise<CollectionInfoArray> {
