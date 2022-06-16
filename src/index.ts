@@ -830,7 +830,7 @@ async function getCollectionNfts(
 
 const removeRankInfo = (tokens: TokenInfo[]) => {
   for (const token of tokens) {
-    if (!token.pixelRankVisible) {
+    if (!token.pixelRankVisible && token.pixelRankBucket === 10) {
       // TODO: look up in reveal items, the token doesn't have the latest
       delete token.pixelRank;
       delete token.pixelScore;
