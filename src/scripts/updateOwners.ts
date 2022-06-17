@@ -89,29 +89,33 @@ async function updateOwners(tokenDocRefs: FirebaseFirestore.DocumentReference[])
   }
   const results = await infinityDb.getAll(...tokenDocRefs);
   for (const result of results) {
-    const data = result.data();
-    // path is of the form collections/{chainId:collectionAddress/nfts/{tokenId}
-    const pathSplit = result.ref.path.split('/');
-    const chainId = pathSplit[1].split(':')[0];
-    const collectionAddress = pathSplit[1].split(':')[1];
-    const tokenId = pathSplit[3];
-    let owner = data?.owner;
-    if (!owner && chainId && collectionAddress && tokenId) {
-      owner = await getErc721Owner({ address: collectionAddress, tokenId, chainId });
+    try {
+      const data = result.data();
+      // path is of the form collections/{chainId:collectionAddress/nfts/{tokenId}
+      const pathSplit = result.ref.path.split('/');
+      const chainId = pathSplit[1].split(':')[0];
+      const collectionAddress = pathSplit[1].split(':')[1];
+      const tokenId = pathSplit[3];
+      let owner = data?.owner;
+      if (!owner && chainId && collectionAddress && tokenId) {
+        owner = await getErc721Owner({ address: collectionAddress, tokenId, chainId });
+      }
+      if (!owner) {
+        console.error(
+          'Missing owner info in both infinityDb and blockchain!!',
+          chainId,
+          collectionAddress,
+          tokenId,
+          result.ref.path
+        );
+        continue;
+      }
+      const docId = getDocIdHash({ chainId, collectionAddress, tokenId });
+      const docRef = pixelScoreDb.collection(RANKINGS_COLL).doc(docId);
+      pixelScoreDbBatchHandler.add(docRef, { owner }, { merge: true });
+    } catch (e) {
+      console.error('Error updating owner for', result.ref.path, e);
     }
-    if (!owner) {
-      console.error(
-        'Missing owner info in both infinityDb and blockchain!!',
-        chainId,
-        collectionAddress,
-        tokenId,
-        result.ref.path
-      );
-      continue;
-    }
-    const docId = getDocIdHash({ chainId, collectionAddress, tokenId });
-    const docRef = pixelScoreDb.collection(RANKINGS_COLL).doc(docId);
-    pixelScoreDbBatchHandler.add(docRef, { owner }, { merge: true });
   }
 }
 
