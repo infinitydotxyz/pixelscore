@@ -11,7 +11,7 @@ import {
   UpdateRankVisibility,
   UserRecord
 } from './types/main';
-import { CollectionSearchQuery, NftRankQuery, NftsQuery, PortfolioScore, UserNftsQuery } from './types/apiQueries';
+import { CollectionSearchQuery, NftRankQuery, NftsQuery, UserNftsQuery } from './types/apiQueries';
 import {
   ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL,
   ALCHEMY_WEBHOOK_ASSET_ETH,
@@ -31,7 +31,7 @@ import {
 import { pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
-import { getPageUserNftsFromAlchemy } from './utils/alchemy';
+import { getPageUserNftsFromAlchemy, getUserNftsFromAlchemy } from './utils/alchemy';
 import { startServer } from './server';
 import bodyParser from 'body-parser';
 import { getTokenInfo, searchCollections, updateTokenInfo } from './utils/pixelstore';
@@ -184,21 +184,6 @@ app.get('/u/:user/reveals', async (req: Request, res: Response) => {
   }
 });
 
-// this calcs the score, look in the UserRecord for the already calced value
-app.get('/u/:user/portfolio-score', async (req: Request, res: Response) => {
-  const user = trimLowerCase(req.params.user);
-  const chainId = (req.query.chainId as string) ?? '1';
-
-  const scoreInfo = await getPortfolioScore(user, chainId);
-
-  const doc = pixelScoreDb.collection(USERS_COLL).doc(user);
-
-  const userData: Partial<UserRecord> = { portfolioScore: scoreInfo.score };
-  doc.set(userData, { merge: true });
-
-  res.send(scoreInfo);
-});
-
 app.get('/u/:user', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
   const chainId = (req.query.chainId as string) ?? '1';
@@ -207,39 +192,31 @@ app.get('/u/:user', async (req: Request, res: Response) => {
 
   let userRec = (await doc.get()).data() as UserRecord | undefined;
 
-  let save = false;
   if (!userRec) {
-    userRec = { name: '', address: user, portfolioScore: -1 };
-    save = true;
+    userRec = {
+      name: '',
+      address: user,
+      portfolioScore: -1,
+      portfolioScoreNumNfts: -1,
+      portfolioScoreUpdatedAt: -1,
+      totalNftsOwned: -1
+    };
   }
 
   if (userRec.address === undefined) {
     userRec.address = user;
-    save = true;
   }
 
-  if (userRec.portfolioScore === undefined || userRec.portfolioScore === -1) {
-    const score = await getPortfolioScore(user, chainId);
+  const scoreInfo = await getPortfolioScore(user, chainId);
+  userRec.portfolioScore = scoreInfo.portfolioScore / scoreInfo.portfolioScoreNumNfts;
+  userRec.portfolioScoreUpdatedAt = scoreInfo.portfolioScoreUpdatedAt;
+  userRec.portfolioScoreNumNfts = scoreInfo.portfolioScoreNumNfts;
 
-    userRec.portfolioScore = score.score / score.count;
-    save = true;
-  }
-
-  if (save) {
-    doc.set(userRec, { merge: true });
-  }
+  doc.set(userRec, { merge: true }).catch((err) => {
+    console.error('Error while setting user record', user, err);
+  });
 
   res.send(userRec);
-});
-
-app.post('/u/:user', async (req: Request, res: Response) => {
-  const user = trimLowerCase(req.params.user);
-
-  const data = req.body as UserRecord;
-
-  await pixelScoreDb.collection(USERS_COLL).doc(user).set(data);
-
-  res.sendStatus(200);
 });
 
 // ========================================= POST REQUESTS =========================================
@@ -297,6 +274,22 @@ app.post(
 );
 
 // ################################# User authenticated write endpoints #################################
+
+app.post('/u/:user', async (req: Request, res: Response) => {
+  const user = trimLowerCase(req.params.user);
+
+  const data = req.body as UserRecord;
+
+  await pixelScoreDb
+    .collection(USERS_COLL)
+    .doc(user)
+    .set(data)
+    .catch((err) => {
+      console.error('Error while setting user record', user, err);
+    });
+
+  res.sendStatus(200);
+});
 
 app.post('/u/:user/reveals', (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
@@ -455,25 +448,12 @@ async function getUserNfts(
   const limit = query.limit + 1; // +1 to check if there is a next page
   let nfts: Nft[] = [];
   let alchemyHasNextPage = true;
-  let pageKey = '';
   let nextPageKey = cursor?.pageKey ?? '';
-  let pageNumber = 0;
   while (nfts.length < limit && alchemyHasNextPage) {
-    pageKey = nextPageKey;
-    const startAtToken = pageNumber === 0 && cursor.startAtToken ? cursor.startAtToken : undefined;
-
-    const response = await getPageUserNftsFromAlchemy(
-      pageKey,
-      chainId,
-      userAddress,
-      query.collectionAddresses,
-      startAtToken
-    );
-
+    const response = await getPageUserNftsFromAlchemy(nextPageKey, chainId, userAddress, query.collectionAddresses);
     nfts = [...nfts, ...response.nfts];
     alchemyHasNextPage = response.hasNextPage;
     nextPageKey = response.pageKey;
-    pageNumber += 1;
   }
 
   const continueFromCurrentPage = nfts.length > query.limit;
@@ -485,7 +465,7 @@ async function getUserNfts(
   nftsToReturn = await addRankInfoToNFTs(nftsToReturn);
 
   const updatedCursor = encodeCursor({
-    pageKey: continueFromCurrentPage ? pageKey : nextPageKey,
+    pageKey: nextPageKey,
     startAtToken: nftToStartAt
   });
 
@@ -818,21 +798,36 @@ const removeRankInfo = (tokens: TokenInfo[]) => {
   }
 };
 
-const getPortfolioScore = async (userAddress: string, chainId: string): Promise<PortfolioScore> => {
-  const limit = 10000 + 1; // +1 to check if there is a next page
+// calculate portfolio score if not already done or something changed from last calculcation
+const getPortfolioScore = async (userAddress: string, chainId: string): Promise<UserRecord> => {
+  console.log('Fetching portfolio score for', userAddress, chainId);
+  const userDoc = pixelScoreDb.collection(USERS_COLL).doc(userAddress);
+  const userRec = (await userDoc.get()).data() as UserRecord | undefined;
+  // fetch user nfts from alchemy to check if user has acquired / lost any nfts
+  const userNftsResponse = await getUserNftsFromAlchemy(userAddress, chainId, '');
+  const newOwnedCount = userNftsResponse?.totalCount;
+  const didOwnedNftsChange = newOwnedCount && newOwnedCount !== userRec?.totalNftsOwned;
+  const doesPortfolioScoreInfoExist =
+    userRec && userRec.portfolioScore && userRec.portfolioScoreNumNfts && userRec.portfolioScoreUpdatedAt;
+  if (doesPortfolioScoreInfoExist && !didOwnedNftsChange && userRec.portfolioScoreUpdatedAt !== -1) {
+    return userRec;
+  }
+
+  console.log('Re-calculating portfolio score since something changed since last calculation');
+
   let nfts: Nft[] = [];
   let alchemyHasNextPage = true;
   let pageKey = '';
   let nextPageKey = '';
-  while (nfts.length < limit && alchemyHasNextPage) {
+  let totalNftsOwned = 0;
+  while (alchemyHasNextPage) {
     pageKey = nextPageKey;
-    const startAtToken = undefined;
-
-    const response = await getPageUserNftsFromAlchemy(pageKey, chainId, userAddress, [], startAtToken);
-
+    const response = await getPageUserNftsFromAlchemy(pageKey, chainId, userAddress, []);
     nfts = [...nfts, ...response.nfts];
     alchemyHasNextPage = response.hasNextPage;
     nextPageKey = response.pageKey;
+    // no need to sum here since Alchemy response returns the total number of nfts owned by a user in each pagination result
+    totalNftsOwned = response.totalNftsOwned;
   }
 
   // add ranking info for each nft
@@ -847,5 +842,18 @@ const getPortfolioScore = async (userAddress: string, chainId: string): Promise<
     }
   }
 
-  return { score, count };
+  const userRecData = {
+    address: userAddress,
+    name: userRec?.name ?? '',
+    portfolioScore: score,
+    portfolioScoreNumNfts: count,
+    portfolioScoreUpdatedAt: Date.now(),
+    totalNftsOwned
+  };
+
+  userDoc.set(userRecData, { merge: true }).catch((err) => {
+    console.error('Error saving user rec', err);
+  });
+
+  return userRecData;
 };

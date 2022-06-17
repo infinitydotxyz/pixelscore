@@ -84,4 +84,7 @@ export interface UserRecord {
   address: string;
   name: string;
   portfolioScore: number;
+  portfolioScoreUpdatedAt: number;
+  portfolioScoreNumNfts: number;
+  totalNftsOwned: number;
 }

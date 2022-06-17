@@ -41,23 +41,22 @@ export const getPageUserNftsFromAlchemy = async (
   pageKey: string,
   chainId: string,
   userAddress: string,
-  collectionAddresses?: string[],
-  startAtToken?: string
-): Promise<{ pageKey: string; nfts: Nft[]; hasNextPage: boolean }> => {
+  collectionAddresses?: string[]
+): Promise<{ pageKey: string; nfts: Nft[]; hasNextPage: boolean; totalNftsOwned: number }> => {
   const response = await getUserNftsFromAlchemy(userAddress, chainId, pageKey, collectionAddresses);
   const nextPageKey = response?.pageKey ?? '';
-  let nfts = response?.ownedNfts ?? [];
-
-  if (startAtToken) {
-    const indexToStartAt = nfts.findIndex((item: any) => BigNumber.from(item.id.tokenId).toString() === startAtToken);
-    nfts = nfts.slice(indexToStartAt);
-  }
+  const nfts = response?.ownedNfts ?? [];
 
   const nftsToTransform = nfts.map((item: any) => ({ alchemyNft: item, chainId }));
   const results = await transformAlchemyNftToPixelScoreNft(nftsToTransform);
   const validNfts = results.filter((item: any) => !!item) as Nft[];
 
-  return { pageKey: nextPageKey, nfts: validNfts, hasNextPage: !!nextPageKey };
+  return {
+    pageKey: nextPageKey,
+    nfts: validNfts,
+    hasNextPage: !!nextPageKey,
+    totalNftsOwned: response?.totalCount ?? 0
+  };
 };
 
 export async function transformAlchemyNftToPixelScoreNft(
