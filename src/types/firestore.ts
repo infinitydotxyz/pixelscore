@@ -1,19 +1,9 @@
-import { Erc721Metadata, RefreshTokenErrorJson, RefreshTokenFlow, TokenStandard } from '@infinityxyz/lib/types/core';
+import { Erc721Metadata, TokenStandard } from '@infinityxyz/lib/types/core';
 import { CollectionInfo, TokenInfo } from './main';
 export interface NftArray {
   data: Nft[];
   cursor: string;
   hasNextPage: boolean;
-}
-
-export interface ExternalNftArray {
-  data: ExternalNft[];
-  cursor: string;
-  hasNextPage: boolean;
-}
-
-export interface ExternalNft extends Nft {
-  isSupported: boolean;
 }
 
 export interface Nft {
@@ -36,7 +26,6 @@ export interface Nft {
   updatedAt: number;
   tokenUri: string;
   image: NftImage;
-  state?: NftStateDto;
   tokenStandard: TokenStandard;
   owner?: string;
 
@@ -57,15 +46,6 @@ export interface NftImage {
   url: string;
   originalUrl: string;
   updatedAt: number;
-}
-
-interface NftStateMetadataDto {
-  step: RefreshTokenFlow;
-  error?: RefreshTokenErrorJson;
-}
-
-export interface NftStateDto {
-  metadata: NftStateMetadataDto;
 }
 
 export interface TokenInfoArray {

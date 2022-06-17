@@ -110,7 +110,6 @@ export async function transformAlchemyNftToPixelScoreNft(
         originalUrl: (nftDto?.image?.originalUrl || alchemyNft?.media?.[0]?.raw || alchemyNft?.metadata?.image) ?? '',
         updatedAt: nftDto?.image?.updatedAt ?? NaN
       },
-      state: nftDto?.state ?? undefined,
       tokenStandard: alchemyNft.id.tokenMetadata.tokenType as TokenStandard
     };
   });

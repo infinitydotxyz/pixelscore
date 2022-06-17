@@ -456,35 +456,28 @@ async function getUserNfts(
 ): Promise<NftArray> {
   type Cursor = { pageKey?: string; startAtToken?: string };
   const cursor = decodeCursorToObject<Cursor>(query.cursor);
-
-  const limit = query.limit + 1; // +1 to check if there is a next page
   let nfts: Nft[] = [];
   let alchemyHasNextPage = true;
   let nextPageKey = cursor?.pageKey ?? '';
-  while (nfts.length < limit && alchemyHasNextPage) {
+  while (alchemyHasNextPage) {
     const response = await getPageUserNftsFromAlchemy(nextPageKey, chainId, userAddress, query.collectionAddresses);
     nfts = [...nfts, ...response.nfts];
     alchemyHasNextPage = response.hasNextPage;
     nextPageKey = response.pageKey;
   }
 
-  const continueFromCurrentPage = nfts.length > query.limit;
-  const hasNextPage = continueFromCurrentPage || alchemyHasNextPage;
-  let nftsToReturn = nfts.slice(0, query.limit);
-  const nftToStartAt = nfts?.[query.limit]?.tokenId;
-
   // add ranking info for each nft
-  nftsToReturn = await addRankInfoToNFTs(nftsToReturn);
+  nfts = await addRankInfoToNFTs(nfts);
 
   const updatedCursor = encodeCursor({
     pageKey: nextPageKey,
-    startAtToken: nftToStartAt
+    startAtToken: ''
   });
 
   return {
-    data: nftsToReturn,
+    data: nfts,
     cursor: updatedCursor,
-    hasNextPage
+    hasNextPage: alchemyHasNextPage
   };
 }
 
