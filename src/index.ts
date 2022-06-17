@@ -84,6 +84,18 @@ app.get('/collections/search', async (req: Request, res: Response) => {
   });
 });
 
+app.get('/collections/:chainId/:collectionAddress/nfts', async (req: Request, res: Response) => {
+  const chainId = req.params.chainId;
+  const collectionAddress = trimLowerCase(req.params.collectionAddress);
+  const query = req.query as unknown as NftRankQuery;
+
+  const minRank = query.minRank;
+  const maxRank = query.maxRank;
+
+  const data = await getCollectionNfts(query, minRank, maxRank, chainId, collectionAddress);
+  res.send(data);
+});
+
 app.get('/collections/:chainId/:collectionAddress/nfts-bottom', async (req: Request, res: Response) => {
   const chainId = req.params.chainId;
   const collectionAddress = trimLowerCase(req.params.collectionAddress);
