@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
-import 'reflect-metadata';
 import { getCollectionDocId, trimLowerCase } from '@infinityxyz/lib/utils';
 import { QuerySnapshot } from 'firebase-admin/firestore';
 import { existsSync, readFileSync, writeFileSync } from 'fs';
