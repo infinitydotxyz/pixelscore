@@ -38,6 +38,7 @@ export interface TokenInfo {
   pixelRankVisible?: boolean;
   pixelRankRevealer?: string;
   pixelRankRevealedAt?: number;
+  owner?: string;
 }
 
 export interface UpdateRankVisibility {

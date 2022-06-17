@@ -331,7 +331,7 @@ app.post('/u/:user/reveals', (req: Request, res: Response) => {
     pixelScoreDbBatchHandler.add(topDocRef, topDocData, { merge: true });
 
     // write items
-    const items = data.revealItems;
+    const items = data.revealItems as TokenInfo[];
     for (const item of items) {
       const itemDocId = getDocIdHash({
         chainId: item.chainId,

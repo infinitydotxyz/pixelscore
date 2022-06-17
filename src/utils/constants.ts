@@ -8,6 +8,7 @@ export const AUTH_HEADERS = {
 };
 
 export const PIXELSCORE_WALLET = '0xb01ab20314e743b62836ca7060fc56ab69157bc1';
+// todo: change price
 export const PIXELSCORE_PRICE_PER_ITEM = 0.0001;
 export const ALCHEMY_WEBHOOK_ASSET_ETH = 'ETH';
 export const ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL = 'external';
