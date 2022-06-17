@@ -84,6 +84,9 @@ async function runAFew(docSnap: QuerySnapshot) {
 }
 
 async function updateOwners(tokenDocRefs: FirebaseFirestore.DocumentReference[]) {
+  if (tokenDocRefs.length === 0) {
+    return;
+  }
   const results = await infinityDb.getAll(...tokenDocRefs);
   for (const result of results) {
     const data = result.data();
