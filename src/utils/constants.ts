@@ -36,7 +36,7 @@ export function getProvider(chainId: string) {
   } else if (chainId === '137') {
     return polygonProvider;
   }
-  return null;
+  return undefined;
 }
 
 const getInfuraIPFSAuthKeys = (): string[] => {

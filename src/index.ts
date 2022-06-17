@@ -554,7 +554,7 @@ async function updatePendingTxn(
 ) {
   try {
     const provider = getProvider(chainId);
-    if (provider === null) {
+    if (provider === undefined) {
       console.error('Not waiting for txn since provider is null');
     } else {
       const receipt = await provider.waitForTransaction(txnHash, 1);
