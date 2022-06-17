@@ -44,7 +44,6 @@ export interface NftRankQuery {
   orderDirection: OrderDirection;
   limit: number;
   cursor?: string;
-
   minRank: number;
   maxRank: number;
 }

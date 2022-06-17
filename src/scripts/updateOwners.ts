@@ -98,7 +98,11 @@ async function updateOwners(tokenDocRefs: FirebaseFirestore.DocumentReference[])
       const tokenId = pathSplit[3];
       let owner = data?.owner;
       if (!owner && chainId && collectionAddress && tokenId) {
-        owner = await getErc721Owner({ address: collectionAddress, tokenId, chainId });
+        try {
+          owner = await getErc721Owner({ address: collectionAddress, tokenId, chainId });
+        } catch (e) {
+          console.error('Error getting owner from blockchain');
+        }
       }
       if (!owner) {
         console.error(
@@ -112,7 +116,7 @@ async function updateOwners(tokenDocRefs: FirebaseFirestore.DocumentReference[])
       }
       const docId = getDocIdHash({ chainId, collectionAddress, tokenId });
       const docRef = pixelScoreDb.collection(RANKINGS_COLL).doc(docId);
-      pixelScoreDbBatchHandler.add(docRef, { owner }, { merge: true });
+      pixelScoreDbBatchHandler.add(docRef, { owner, ownerFetched: true }, { merge: true });
     } catch (e) {
       console.error('Error updating owner for', result.ref.path, e);
     }

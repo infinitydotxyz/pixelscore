@@ -1,8 +1,11 @@
 import { jsonString, trimLowerCase } from '@infinityxyz/lib/utils';
+import bodyParser from 'body-parser';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
-import { Nft, TokenInfoArray, UserNftsArray, CollectionInfoArray } from 'types/firestore';
+import { CollectionInfoArray, Nft, TokenInfoArray, UserNftsArray } from 'types/firestore';
+import { startServer } from './server';
+import { CollectionSearchQuery, NftRankQuery, NftsOrderBy, NftsQuery, UserNftsQuery } from './types/apiQueries';
 import {
   AlchemyAddressActivityWebHook,
   CollectionInfo,
@@ -11,30 +14,27 @@ import {
   UpdateRankVisibility,
   UserRecord
 } from './types/main';
-import { CollectionSearchQuery, NftRankQuery, NftsOrderBy, NftsQuery, UserNftsQuery } from './types/apiQueries';
+import { getPageUserNftsFromAlchemy, getUserNftsFromAlchemy } from './utils/alchemy';
 import {
   ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL,
   ALCHEMY_WEBHOOK_ASSET_ETH,
   ALCHEMY_WEBHOOK_ETH_MAINNET,
+  COLLECTIONS_COLL,
   DEFAULT_PAGE_LIMIT,
   getProvider,
+  MIN_PIXELRANK_PUBLICLY_VISIBLE,
   PIXELSCORE_PRICE_PER_ITEM,
   PIXELSCORE_WALLET,
   RANKINGS_COLL,
   REVEALS_COLL,
   REVEALS_ITEMS_SUB_COLL,
   REVEAL_ITEMS_LIMIT,
-  WEBHOOK_EVENTS_COLL,
   USERS_COLL,
-  COLLECTIONS_COLL,
-  MIN_PIXELRANK_PUBLICLY_VISIBLE
+  WEBHOOK_EVENTS_COLL
 } from './utils/constants';
 import { pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
 import { decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
-import { getPageUserNftsFromAlchemy, getUserNftsFromAlchemy } from './utils/alchemy';
-import { startServer } from './server';
-import bodyParser from 'body-parser';
 import { getTokenInfo, searchCollections, updateTokenInfo } from './utils/pixelstore';
 
 dotenv.config();
@@ -121,11 +121,8 @@ app.get('/nfts', async (req: Request, res: Response) => {
 
 app.get('/u/:user/nfts', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
-  const query = req.query as unknown as UserNftsQuery;
-  const chainId = (req.query.chainId as string) ?? '1';
-
-  const nfts = await getUserNfts(user, chainId, query);
-
+  const query = req.query as unknown as NftRankQuery;
+  const nfts = await getUserNftsFromPixelScoreDb(user, query);
   const resp = {
     ...nfts
   };
@@ -442,6 +439,39 @@ app.post('/u/:user/rankVisibility', async (req: Request, res: Response) => {
 
 // ============================================ HELPER FUNCTIONS ============================================
 
+async function getUserNftsFromPixelScoreDb(userAddress: string, query: NftRankQuery): Promise<TokenInfoArray> {
+  const limit = query.limit + 1;
+  const minRank = query.minRank;
+  const maxRank = query.maxRank;
+  let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
+  nftsQuery = nftsQuery
+    .where('pixelRank', '>=', minRank)
+    .where('pixelRank', '<', maxRank)
+    .where('owner', '==', userAddress);
+  nftsQuery = nftsQuery.orderBy(NftsOrderBy.PixelRank, query.orderDirection);
+
+  let cursor = query.cursor;
+  if (cursor) {
+    const startDoc = await pixelScoreDb.doc(cursor).get();
+    nftsQuery = nftsQuery.startAfter(startDoc);
+  }
+
+  const results = await nftsQuery.limit(limit).get();
+  const hasNextPage = results.size > query.limit;
+  const nftsToReturn = results.docs.slice(0, query.limit) as unknown as TokenInfo[];
+
+  removeRankInfo(nftsToReturn);
+
+  cursor = results.docs[query.limit - 1]?.ref?.path;
+  return {
+    data: nftsToReturn,
+    cursor,
+    hasNextPage
+  };
+}
+
+// todo: remove when ready
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function getUserNfts(
   userAddress: string,
   chainId: string,
