@@ -63,12 +63,17 @@ async function runAFew(docSnap: QuerySnapshot) {
       const collectionAddress = data.collectionAddress;
       const tokenId = data.tokenId;
       const owner = data.owner;
+      const ownerFetched = data.ownerFetched;
       if (!chainId || !collectionAddress || !tokenId) {
         console.error('Missing chainId, collectionAddress or tokenId in doc with id', doc.id);
         continue;
       }
       // skip if owner already set
-      if (owner) {
+      if (owner && ownerFetched) {
+        continue;
+      }
+      if (owner && !ownerFetched) {
+        pixelScoreDbBatchHandler.add(doc.ref, { ownerFetched: true }, { merge: true });
         continue;
       }
 
