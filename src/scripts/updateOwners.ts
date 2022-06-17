@@ -15,24 +15,24 @@ const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 export async function main() {
   // fetch collections from firestore
   console.log('============================== Fetching rankings from firestore =================================');
-  let startAfter = 0;
+  let startAfter = '';
   const offsetFile = path.join(__dirname, 'offset.txt');
   if (existsSync(offsetFile)) {
-    startAfter = parseInt(readFileSync(offsetFile, 'utf8'));
+    startAfter = readFileSync(offsetFile, 'utf8');
   }
   const limit = 500;
   let done = false;
   while (!done) {
     const docSnap = await pixelScoreDb
       .collection(RANKINGS_COLL)
-      .orderBy('pixelRank', 'asc')
+      .orderBy('collectionAddress', 'asc')
       .startAfter(startAfter)
       .limit(limit)
       .get();
     console.log('================ START AFTER ===============', startAfter, 'limit', docSnap.size);
 
     // update cursor
-    startAfter = docSnap.docs[docSnap.size - 1].get('pixelRank');
+    startAfter = docSnap.docs[docSnap.size - 1].get('collectionAddress');
 
     // break condition
     if (docSnap.size < limit) {
