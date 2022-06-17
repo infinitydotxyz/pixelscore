@@ -22,7 +22,8 @@ export interface NftQuery {
 }
 
 export enum NftsOrderBy {
-  TokenId = 'tokenId'
+  TokenId = 'tokenId',
+  PixelRank = 'pixelRank'
 }
 
 export interface NftsQuery {
@@ -30,8 +31,6 @@ export interface NftsQuery {
   orderDirection: OrderDirection;
   limit: number;
   cursor?: string;
-  traitTypes?: string[];
-  traitValues?: string[];
 }
 
 export interface UserNftsQuery {

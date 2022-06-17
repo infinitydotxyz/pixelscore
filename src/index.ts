@@ -11,7 +11,7 @@ import {
   UpdateRankVisibility,
   UserRecord
 } from './types/main';
-import { CollectionSearchQuery, NftRankQuery, NftsQuery, UserNftsQuery } from './types/apiQueries';
+import { CollectionSearchQuery, NftRankQuery, NftsOrderBy, NftsQuery, UserNftsQuery } from './types/apiQueries';
 import {
   ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL,
   ALCHEMY_WEBHOOK_ASSET_ETH,
@@ -26,7 +26,8 @@ import {
   REVEAL_ITEMS_LIMIT,
   WEBHOOK_EVENTS_COLL,
   USERS_COLL,
-  COLLECTIONS_COLL
+  COLLECTIONS_COLL,
+  MIN_PIXELRANK_PUBLICLY_VISIBLE
 } from './utils/constants';
 import { pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
@@ -96,24 +97,6 @@ app.get('/collections/:chainId/:collectionAddress/nfts', async (req: Request, re
   res.send(data);
 });
 
-app.get('/collections/:chainId/:collectionAddress/nfts-bottom', async (req: Request, res: Response) => {
-  const chainId = req.params.chainId;
-  const collectionAddress = trimLowerCase(req.params.collectionAddress);
-  const query = req.query as unknown as NftsQuery;
-
-  const data = await getCollectionNfts(query, 1, 9, chainId, collectionAddress);
-  res.send(data);
-});
-
-app.get('/collections/:chainId/:collectionAddress/nfts-top', async (req: Request, res: Response) => {
-  const chainId = req.params.chainId;
-  const collectionAddress = trimLowerCase(req.params.collectionAddress);
-  const query = req.query as unknown as NftsQuery;
-
-  const data = await getCollectionNfts(query, 10, 10, chainId, collectionAddress);
-  res.send(data);
-});
-
 app.get('/collections/nfts', async (req: Request, res: Response) => {
   const query = req.query as unknown as NftRankQuery;
 
@@ -121,6 +104,16 @@ app.get('/collections/nfts', async (req: Request, res: Response) => {
   const maxRank = query.maxRank;
 
   const data = await getCollectionNfts(query, minRank, maxRank);
+  res.send(data);
+});
+
+app.get('/nfts', async (req: Request, res: Response) => {
+  const query = req.query as unknown as NftRankQuery;
+
+  const minRank = query.minRank;
+  const maxRank = query.maxRank;
+
+  const data = await getNfts(query, minRank, maxRank);
   res.send(data);
 });
 
@@ -760,22 +753,17 @@ async function getCollectionNfts(
   chainId?: string,
   collectionAddress?: string
 ): Promise<TokenInfoArray> {
-  const rankRange = [...Array(maxRank - minRank + 1).keys()].map((x) => x + minRank);
-
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
 
-  nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
-
+  nftsQuery = nftsQuery.where('pixelRank', '>=', minRank).where('pixelRank', '<', maxRank);
   if (collectionAddress) {
     nftsQuery = nftsQuery.where('collectionAddress', '==', collectionAddress);
   }
-
   if (chainId) {
     nftsQuery = nftsQuery.where('chainId', '==', chainId);
   }
 
-  nftsQuery = nftsQuery.where('pixelRankBucket', 'in', rankRange);
-  nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
+  nftsQuery = nftsQuery.orderBy(NftsOrderBy.PixelRank, query.orderDirection);
 
   if (query.cursor) {
     const startDoc = await pixelScoreDb.doc(query.cursor).get();
@@ -788,9 +776,38 @@ async function getCollectionNfts(
   const results = await nftsQuery.get();
   const data = results.docs.map((item) => {
     const rankInfo = item.data() as TokenInfo;
-
     cursor = item.ref.path;
+    return rankInfo;
+  });
 
+  const hasNextPage = data.length === query.limit;
+
+  // remove rank information unless visible, or user is revealer
+  removeRankInfo(data);
+
+  return {
+    data,
+    cursor: cursor,
+    hasNextPage
+  };
+}
+
+async function getNfts(query: NftsQuery, minRank: number, maxRank: number): Promise<TokenInfoArray> {
+  let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
+  nftsQuery = nftsQuery.where('pixelRank', '>=', minRank).where('pixelRank', '<', maxRank);
+  nftsQuery = nftsQuery.orderBy(NftsOrderBy.PixelRank, query.orderDirection);
+  if (query.cursor) {
+    const startDoc = await pixelScoreDb.doc(query.cursor).get();
+    nftsQuery = nftsQuery.startAfter(startDoc);
+  }
+
+  nftsQuery = nftsQuery.limit(query.limit);
+  let cursor = '';
+
+  const results = await nftsQuery.get();
+  const data = results.docs.map((item) => {
+    const rankInfo = item.data() as TokenInfo;
+    cursor = item.ref.path;
     return rankInfo;
   });
 
@@ -808,7 +825,7 @@ async function getCollectionNfts(
 
 const removeRankInfo = (tokens: TokenInfo[]) => {
   for (const token of tokens) {
-    if (!token.pixelRankVisible && token.pixelRankBucket === 10) {
+    if (!token.pixelRankVisible && token.pixelRank && token.pixelRank <= MIN_PIXELRANK_PUBLICLY_VISIBLE) {
       // TODO: look up in reveal items, the token doesn't have the latest
       delete token.pixelRank;
       delete token.pixelScore;
