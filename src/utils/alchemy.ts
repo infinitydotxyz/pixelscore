@@ -41,11 +41,17 @@ export const getPageUserNftsFromAlchemy = async (
   pageKey: string,
   chainId: string,
   userAddress: string,
-  collectionAddresses?: string[]
+  collectionAddresses?: string[],
+  startAtToken?: string
 ): Promise<{ pageKey: string; nfts: Nft[]; hasNextPage: boolean; totalNftsOwned: number }> => {
   const response = await getUserNftsFromAlchemy(userAddress, chainId, pageKey, collectionAddresses);
   const nextPageKey = response?.pageKey ?? '';
-  const nfts = response?.ownedNfts ?? [];
+  let nfts = response?.ownedNfts ?? [];
+
+  if (startAtToken) {
+    const indexToStartAt = nfts.findIndex((item: any) => BigNumber.from(item.id.tokenId).toString() === startAtToken);
+    nfts = nfts.slice(indexToStartAt);
+  }
 
   const nftsToTransform = nfts.map((item: any) => ({ alchemyNft: item, chainId }));
   const results = await transformAlchemyNftToPixelScoreNft(nftsToTransform);

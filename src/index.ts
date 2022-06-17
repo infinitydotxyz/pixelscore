@@ -459,12 +459,24 @@ async function getUserNfts(
   const limit = query.limit + 1;
   let nfts: Nft[] = [];
   let alchemyHasNextPage = true;
+  let pageKey = '';
   let nextPageKey = cursor?.pageKey ?? '';
+  let pageNumber = 0;
   while (nfts.length < limit && alchemyHasNextPage) {
-    const response = await getPageUserNftsFromAlchemy(nextPageKey, chainId, userAddress, query.collectionAddresses);
+    pageKey = nextPageKey;
+    const startAtToken = pageNumber === 0 && cursor.startAtToken ? cursor.startAtToken : undefined;
+
+    const response = await getPageUserNftsFromAlchemy(
+      pageKey,
+      chainId,
+      userAddress,
+      query.collectionAddresses,
+      startAtToken
+    );
     nfts = [...nfts, ...response.nfts];
     alchemyHasNextPage = response.hasNextPage;
     nextPageKey = response.pageKey;
+    pageNumber += 1;
   }
 
   const continueFromCurrentPage = nfts.length > query.limit;
