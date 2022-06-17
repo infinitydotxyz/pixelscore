@@ -2,7 +2,7 @@ import { jsonString, trimLowerCase } from '@infinityxyz/lib/utils';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
-import { Nft, TokenInfoArray, NftArray, CollectionInfoArray } from 'types/firestore';
+import { Nft, TokenInfoArray, UserNftsArray, CollectionInfoArray } from 'types/firestore';
 import {
   AlchemyAddressActivityWebHook,
   CollectionInfo,
@@ -453,31 +453,37 @@ async function getUserNfts(
   userAddress: string,
   chainId: string,
   query: Pick<UserNftsQuery, 'collectionAddresses' | 'cursor' | 'limit'>
-): Promise<NftArray> {
+): Promise<UserNftsArray> {
   type Cursor = { pageKey?: string; startAtToken?: string };
   const cursor = decodeCursorToObject<Cursor>(query.cursor);
+  const limit = query.limit + 1;
   let nfts: Nft[] = [];
   let alchemyHasNextPage = true;
   let nextPageKey = cursor?.pageKey ?? '';
-  while (alchemyHasNextPage) {
+  while (nfts.length < limit && alchemyHasNextPage) {
     const response = await getPageUserNftsFromAlchemy(nextPageKey, chainId, userAddress, query.collectionAddresses);
     nfts = [...nfts, ...response.nfts];
     alchemyHasNextPage = response.hasNextPage;
     nextPageKey = response.pageKey;
   }
 
+  const continueFromCurrentPage = nfts.length > query.limit;
+  const hasNextPage = continueFromCurrentPage || alchemyHasNextPage;
+  let nftsToReturn = nfts.slice(0, query.limit);
+  const nftToStartAt = nfts?.[query.limit]?.tokenId;
+
   // add ranking info for each nft
-  nfts = await addRankInfoToNFTs(nfts);
+  nftsToReturn = await addRankInfoToNFTs(nftsToReturn);
 
   const updatedCursor = encodeCursor({
     pageKey: nextPageKey,
-    startAtToken: ''
+    startAtToken: nftToStartAt
   });
 
   return {
-    data: nfts,
+    data: nftsToReturn,
     cursor: updatedCursor,
-    hasNextPage: alchemyHasNextPage
+    hasNextPage
   };
 }
 

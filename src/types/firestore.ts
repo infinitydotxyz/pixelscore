@@ -1,6 +1,6 @@
 import { Erc721Metadata, TokenStandard } from '@infinityxyz/lib/types/core';
 import { CollectionInfo, TokenInfo } from './main';
-export interface NftArray {
+export interface UserNftsArray {
   data: Nft[];
   cursor: string;
   hasNextPage: boolean;
