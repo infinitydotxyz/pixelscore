@@ -2,6 +2,7 @@
 import { trimLowerCase } from '@infinityxyz/lib/utils';
 import { execSync } from 'child_process';
 import fs from 'fs';
+import readline from 'readline';
 import path from 'path';
 import { getDocIdHash } from '../utils/main';
 import { TokenInfo } from '../types/main';
@@ -41,8 +42,13 @@ async function processOneSplit(dirPath: string, split: string) {
     }
 
     const splitFile = path.join(dirPath, split);
-    const lines = fs.readFileSync(splitFile, 'utf8').split('\n');
-    for (const line of lines) {
+    // const lines = fs.readFileSync(splitFile, 'utf8').split('\n');
+    const rl = readline.createInterface({
+      input: fs.createReadStream(splitFile, 'utf8'),
+      crlfDelay: Infinity
+    });
+
+    rl.on('line', (line) => {
       const [
         serialNum,
         uselessCol1,
@@ -69,21 +75,52 @@ async function processOneSplit(dirPath: string, split: string) {
         globalPixelRankBucket
       ) {
         collectionSet.add(collectionAddress);
-        // const docId = getDocIdHash({ chainId: CHAIN_ID, collectionAddress, tokenId });
-        // const rankingDocRef = pixelScoreDb.collection(RANKINGS_COLL).doc(docId);
-        // const tokenInfo: TokenInfo = {
-        //   chainId: CHAIN_ID,
-        //   collectionAddress: trimLowerCase(collectionAddress),
-        //   tokenId,
-        //   imageUrl,
-        //   pixelScore: parseFloat(globalPixelScore),
-        //   pixelRank: parseInt(serialNum) + 1,
-        //   pixelRankBucket: parseInt(globalPixelRankBucket),
-        //   inCollectionPixelRank: parseInt(inCollectionPixelRank)
-        // };
-        // pixelScoreDbBatchHandler.add(rankingDocRef, tokenInfo, { merge: true });
       }
-    }
+    });
+
+    // for (const line of lines) {
+    //   const [
+    //     serialNum,
+    //     uselessCol1,
+    //     uselessCol2,
+    //     uselessCol3,
+    //     collectionAddress,
+    //     tokenId,
+    //     globalPixelScore,
+    //     inCollectionPixelRank,
+    //     uselessCol4,
+    //     uselessCol5,
+    //     imageUrl,
+    //     globalPixelRankBucket
+    //   ] = line.split(',');
+
+    //   // to account for empty lines
+    //   if (
+    //     serialNum &&
+    //     collectionAddress &&
+    //     tokenId &&
+    //     globalPixelScore &&
+    //     inCollectionPixelRank &&
+    //     imageUrl &&
+    //     globalPixelRankBucket
+    //   ) {
+    //     collectionSet.add(collectionAddress);
+    //     // const docId = getDocIdHash({ chainId: CHAIN_ID, collectionAddress, tokenId });
+    //     // const rankingDocRef = pixelScoreDb.collection(RANKINGS_COLL).doc(docId);
+    //     // const tokenInfo: TokenInfo = {
+    //     //   chainId: CHAIN_ID,
+    //     //   collectionAddress: trimLowerCase(collectionAddress),
+    //     //   tokenId,
+    //     //   imageUrl,
+    //     //   pixelScore: parseFloat(globalPixelScore),
+    //     //   pixelRank: parseInt(serialNum) + 1,
+    //     //   pixelRankBucket: parseInt(globalPixelRankBucket),
+    //     //   inCollectionPixelRank: parseInt(inCollectionPixelRank)
+    //     // };
+    //     // pixelScoreDbBatchHandler.add(rankingDocRef, tokenInfo, { merge: true });
+    //   }
+    // }
+
     for (const collectionAddress of collectionSet) {
       fs.appendFileSync(ALL_COLLECTIONS_FILE, collectionAddress + '\n');
     }
