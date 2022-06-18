@@ -126,6 +126,7 @@ app.get('/u/:user/nfts', async (req: Request, res: Response) => {
   const resp = {
     ...nfts
   };
+  console.log(resp);
   res.send(resp);
 });
 
@@ -458,7 +459,8 @@ async function getUserNftsFromPixelScoreDb(userAddress: string, query: NftRankQu
 
   const results = await nftsQuery.limit(limit).get();
   const hasNextPage = results.size > query.limit;
-  const nftsToReturn = results.docs.slice(0, query.limit) as unknown as TokenInfo[];
+  const nftsToReturnSnap = results.docs.slice(0, query.limit);
+  const nftsToReturn = nftsToReturnSnap.map((doc) => doc.data() as TokenInfo);
 
   removeRankInfo(nftsToReturn);
 
