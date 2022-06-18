@@ -122,7 +122,9 @@ app.get('/nfts', async (req: Request, res: Response) => {
 app.get('/u/:user/nfts', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
   const query = req.query as unknown as NftRankQuery;
-  const nfts = await getUserNftsFromPixelScoreDb(user, query);
+  const chainId = '1'; // todo: other chainIds?
+  // const nfts = await getUserNftsFromPixelScoreDb(user, query);
+  const nfts = await getUserNfts(user, chainId, query);
   const resp = {
     ...nfts
   };
@@ -439,6 +441,7 @@ app.post('/u/:user/rankVisibility', async (req: Request, res: Response) => {
 
 // ============================================ HELPER FUNCTIONS ============================================
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function getUserNftsFromPixelScoreDb(userAddress: string, query: NftRankQuery): Promise<TokenInfoArray> {
   const limit = query.limit + 1;
   const minRank = query.minRank;

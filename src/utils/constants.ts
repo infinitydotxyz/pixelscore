@@ -7,6 +7,19 @@ export const AUTH_HEADERS = {
   message: 'x-auth-message'
 };
 
+export const PIXELRANK_BUCKET_PERCENT_MAP = {
+  10: 'Top 1%',
+  9: 'Top 3%',
+  8: 'Top 5%',
+  7: 'Top 7%',
+  6: 'Top 10%',
+  5: 'Top 15%',
+  4: 'Top 25%',
+  3: 'Top 40%',
+  2: 'Top 65%',
+  1: 'Top 100%'
+};
+
 export const PIXELSCORE_WALLET = '0xb01ab20314e743b62836ca7060fc56ab69157bc1';
 export const MIN_PIXELRANK_PUBLICLY_VISIBLE = 500_000;
 // todo: change price
