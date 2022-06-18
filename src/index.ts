@@ -779,7 +779,6 @@ async function getCollectionNfts(
 ): Promise<TokenInfoArray> {
   const rankRange = [...Array(maxRank - minRank + 1).keys()].map((x) => x + minRank);
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
-  nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
   if (collectionAddress) {
     nftsQuery = nftsQuery.where('collectionAddress', '==', collectionAddress);
   }
@@ -791,8 +790,10 @@ async function getCollectionNfts(
     nftsQuery = nftsQuery.where('pixelRankVisible', '==', true);
   } else if (!query.showOnlyVisible && query.showOnlyUnvisible) {
     nftsQuery = nftsQuery.where('pixelRankVisible', '!=', true);
+    nftsQuery = nftsQuery.orderBy('pixelRankVisible', 'desc');
   }
 
+  nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
   nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
 
   if (query.cursor) {
@@ -825,14 +826,14 @@ async function getCollectionNfts(
 async function getNfts(query: NftsQuery, minRank: number, maxRank: number): Promise<TokenInfoArray> {
   const rankRange = [...Array(maxRank - minRank + 1).keys()].map((x) => x + minRank);
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
-  nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
   nftsQuery = nftsQuery.where('pixelRankBucket', 'in', rankRange);
   if (query.showOnlyVisible && !query.showOnlyUnvisible) {
     nftsQuery = nftsQuery.where('pixelRankVisible', '==', true);
   } else if (!query.showOnlyVisible && query.showOnlyUnvisible) {
     nftsQuery = nftsQuery.where('pixelRankVisible', '!=', true);
+    nftsQuery = nftsQuery.orderBy('pixelRankVisible', 'desc');
   }
-
+  nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
   nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
 
   if (query.cursor) {

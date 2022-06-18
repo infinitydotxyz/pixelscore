@@ -33,8 +33,8 @@ export interface NftsQuery {
   cursor?: string;
   minRank?: number;
   maxRank?: number;
-  showOnlyVisible?: boolean;
-  showOnlyUnvisible?: boolean;
+  showOnlyVisible?: true;
+  showOnlyUnvisible?: true;
 }
 
 export interface UserNftsQuery {
