@@ -77,7 +77,6 @@ async function processOneCollection(collectionAddress: string) {
       const size = remaining.length;
       const size83 = Math.ceil(size * 0.83);
       const random83 = getRandom(remaining, size83);
-      console.log('Random 17% length for collection', collectionAddress, 'with prb <=7 is', size - random83.length);
       for (const tokenInfo of random83) {
         const tokenId = tokenInfo.tokenId ?? '';
         if (tokenId) {
@@ -90,7 +89,7 @@ async function processOneCollection(collectionAddress: string) {
 
     // flush remaining data
     await pixelScoreDbBatchHandler.flush();
-    console.log(`=================== Finished collection ${collectionAddress} ==================== \n`);
+    console.log(`==== Finished collection ${collectionAddress} ==== \n`);
     execSync(`cd ${COMPLETED_COLLECTIONS_DIR} && touch ${collectionAddress}`);
   } catch (e) {
     console.error('Error processing collection:', collectionAddress, e);
