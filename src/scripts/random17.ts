@@ -48,6 +48,7 @@ async function processOneSplit(dirPath: string, split: string) {
       crlfDelay: Infinity
     });
 
+    let numLinesRead = 0;
     rl.on('line', (line) => {
       const [
         serialNum,
@@ -74,6 +75,7 @@ async function processOneSplit(dirPath: string, split: string) {
         imageUrl &&
         globalPixelRankBucket
       ) {
+        ++numLinesRead;
         collectionSet.add(collectionAddress);
       }
     });
@@ -121,13 +123,15 @@ async function processOneSplit(dirPath: string, split: string) {
     //   }
     // }
 
-    for (const collectionAddress of collectionSet) {
-      fs.appendFileSync(ALL_COLLECTIONS_FILE, collectionAddress + '\n');
-    }
+    rl.on('close', () => {
+      for (const collectionAddress of collectionSet) {
+        fs.appendFileSync(ALL_COLLECTIONS_FILE, collectionAddress + '\n');
+      }
+    });
     // commit any remaining data
     // await pixelScoreDbBatchHandler.flush();
-    console.log('======================== Finished Collecting split:' + split + '======================== \n\n\n');
-    execSync(`touch ${splitCompleteFile}`);
+    // console.log('======================== Finished Collecting split:' + split + '======================== \n\n\n');
+    // execSync(`touch ${splitCompleteFile}`);
   } catch (error) {
     console.error('Error processing split:', split, error);
   }
