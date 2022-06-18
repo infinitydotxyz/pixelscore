@@ -126,7 +126,6 @@ app.get('/u/:user/nfts', async (req: Request, res: Response) => {
   const resp = {
     ...nfts
   };
-  console.log(resp);
   res.send(resp);
 });
 
@@ -785,17 +784,19 @@ async function getCollectionNfts(
   chainId?: string,
   collectionAddress?: string
 ): Promise<TokenInfoArray> {
-  let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
+  const rankRange = [...Array(maxRank - minRank + 1).keys()].map((x) => x + minRank);
 
-  nftsQuery = nftsQuery.where('pixelRank', '>=', minRank).where('pixelRank', '<', maxRank);
+  let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
+  nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
   if (collectionAddress) {
     nftsQuery = nftsQuery.where('collectionAddress', '==', collectionAddress);
   }
   if (chainId) {
     nftsQuery = nftsQuery.where('chainId', '==', chainId);
   }
+  nftsQuery = nftsQuery.where('pixelRankBucket', 'in', rankRange);
 
-  nftsQuery = nftsQuery.orderBy(NftsOrderBy.PixelRank, query.orderDirection);
+  nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
 
   if (query.cursor) {
     const startDoc = await pixelScoreDb.doc(query.cursor).get();
@@ -825,9 +826,12 @@ async function getCollectionNfts(
 }
 
 async function getNfts(query: NftsQuery, minRank: number, maxRank: number): Promise<TokenInfoArray> {
+  const rankRange = [...Array(maxRank - minRank + 1).keys()].map((x) => x + minRank);
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
-  nftsQuery = nftsQuery.where('pixelRank', '>=', minRank).where('pixelRank', '<', maxRank);
-  nftsQuery = nftsQuery.orderBy(NftsOrderBy.PixelRank, query.orderDirection);
+  nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
+  nftsQuery = nftsQuery.where('pixelRankBucket', 'in', rankRange);
+  nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
+
   if (query.cursor) {
     const startDoc = await pixelScoreDb.doc(query.cursor).get();
     nftsQuery = nftsQuery.startAfter(startDoc);
