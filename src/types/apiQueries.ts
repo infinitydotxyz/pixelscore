@@ -31,19 +31,14 @@ export interface NftsQuery {
   orderDirection: OrderDirection;
   limit: number;
   cursor?: string;
+  minRank?: number;
+  maxRank?: number;
+  showOnlyVisible?: boolean;
+  showOnlyUnvisible?: boolean;
 }
 
 export interface UserNftsQuery {
   collectionAddresses?: string[];
   limit: number;
   cursor?: string;
-}
-
-export interface NftRankQuery {
-  orderBy: NftsOrderBy;
-  orderDirection: OrderDirection;
-  limit: number;
-  cursor?: string;
-  minRank: number;
-  maxRank: number;
 }

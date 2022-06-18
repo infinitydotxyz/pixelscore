@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
 import { CollectionInfoArray, Nft, TokenInfoArray, UserNftsArray } from 'types/firestore';
 import { startServer } from './server';
-import { CollectionSearchQuery, NftRankQuery, NftsOrderBy, NftsQuery, UserNftsQuery } from './types/apiQueries';
+import { CollectionSearchQuery, NftsOrderBy, NftsQuery, UserNftsQuery } from './types/apiQueries';
 import {
   AlchemyAddressActivityWebHook,
   CollectionInfo,
@@ -88,30 +88,20 @@ app.get('/collections/search', async (req: Request, res: Response) => {
 app.get('/collections/:chainId/:collectionAddress/nfts', async (req: Request, res: Response) => {
   const chainId = req.params.chainId;
   const collectionAddress = trimLowerCase(req.params.collectionAddress);
-  const query = req.query as unknown as NftRankQuery;
+  const query = req.query as unknown as NftsQuery;
 
-  const minRank = query.minRank;
-  const maxRank = query.maxRank;
+  const minRank = query.minRank ?? 1;
+  const maxRank = query.maxRank ?? 10;
 
   const data = await getCollectionNfts(query, minRank, maxRank, chainId, collectionAddress);
   res.send(data);
 });
 
-app.get('/collections/nfts', async (req: Request, res: Response) => {
-  const query = req.query as unknown as NftRankQuery;
-
-  const minRank = query.minRank;
-  const maxRank = query.maxRank;
-
-  const data = await getCollectionNfts(query, minRank, maxRank);
-  res.send(data);
-});
-
 app.get('/nfts', async (req: Request, res: Response) => {
-  const query = req.query as unknown as NftRankQuery;
+  const query = req.query as unknown as NftsQuery;
 
-  const minRank = query.minRank;
-  const maxRank = query.maxRank;
+  const minRank = query.minRank ?? 1;
+  const maxRank = query.maxRank ?? 10;
 
   const data = await getNfts(query, minRank, maxRank);
   res.send(data);
@@ -121,7 +111,7 @@ app.get('/nfts', async (req: Request, res: Response) => {
 
 app.get('/u/:user/nfts', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
-  const query = req.query as unknown as NftRankQuery;
+  const query = req.query as unknown as NftsQuery;
   const chainId = '1'; // todo: other chainIds?
   // const nfts = await getUserNftsFromPixelScoreDb(user, query);
   const nfts = await getUserNfts(user, chainId, query);
@@ -442,7 +432,7 @@ app.post('/u/:user/rankVisibility', async (req: Request, res: Response) => {
 // ============================================ HELPER FUNCTIONS ============================================
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function getUserNftsFromPixelScoreDb(userAddress: string, query: NftRankQuery): Promise<TokenInfoArray> {
+async function getUserNftsFromPixelScoreDb(userAddress: string, query: NftsQuery): Promise<TokenInfoArray> {
   const limit = query.limit + 1;
   const minRank = query.minRank;
   const maxRank = query.maxRank;
@@ -788,7 +778,6 @@ async function getCollectionNfts(
   collectionAddress?: string
 ): Promise<TokenInfoArray> {
   const rankRange = [...Array(maxRank - minRank + 1).keys()].map((x) => x + minRank);
-
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
   nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
   if (collectionAddress) {
@@ -798,6 +787,11 @@ async function getCollectionNfts(
     nftsQuery = nftsQuery.where('chainId', '==', chainId);
   }
   nftsQuery = nftsQuery.where('pixelRankBucket', 'in', rankRange);
+  if (query.showOnlyVisible && !query.showOnlyUnvisible) {
+    nftsQuery = nftsQuery.where('pixelRankVisible', '==', true);
+  } else if (!query.showOnlyVisible && query.showOnlyUnvisible) {
+    nftsQuery = nftsQuery.where('pixelRankVisible', '!=', true);
+  }
 
   nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
 
@@ -833,6 +827,12 @@ async function getNfts(query: NftsQuery, minRank: number, maxRank: number): Prom
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
   nftsQuery = nftsQuery.orderBy('hasBlueCheck', 'desc');
   nftsQuery = nftsQuery.where('pixelRankBucket', 'in', rankRange);
+  if (query.showOnlyVisible && !query.showOnlyUnvisible) {
+    nftsQuery = nftsQuery.where('pixelRankVisible', '==', true);
+  } else if (!query.showOnlyVisible && query.showOnlyUnvisible) {
+    nftsQuery = nftsQuery.where('pixelRankVisible', '!=', true);
+  }
+
   nftsQuery = nftsQuery.orderBy(query.orderBy, query.orderDirection);
 
   if (query.cursor) {

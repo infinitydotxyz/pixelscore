@@ -131,17 +131,4 @@ export const updateTokenInfo = async (
   });
 
   pixelScoreDb.doc(`${RANKINGS_COLL}/${docId}`).set(tokenInfo, { merge: true });
-
-  // alternate
-  // const tokenInfoSnapshot = await pixelScoreDb
-  //   .collection(RANKINGS_COLL)
-  //   .where('chainId', '==', chainId)
-  //   .where('collectionAddress', '==', collectionAddress)
-  //   .where('tokenId', '==', tokenId)
-  //   .get();
-
-  // if (tokenInfoSnapshot.size === 1) {
-  //   const doc = tokenInfoSnapshot.docs[0];
-  //   doc.ref.set(tokenInfo, { merge: true });
-  // }
 };
