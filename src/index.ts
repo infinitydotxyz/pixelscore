@@ -22,7 +22,7 @@ import {
   COLLECTIONS_COLL,
   DEFAULT_PAGE_LIMIT,
   getProvider,
-  MIN_PIXELRANK_PUBLICLY_VISIBLE,
+  MAX_PIXELRANKBUCKET_PUBLICLY_VISIBLE,
   PIXELSCORE_PRICE_PER_ITEM,
   PIXELSCORE_WALLET,
   RANKINGS_COLL,
@@ -327,8 +327,8 @@ app.post('/u/:user/reveals', (req: Request, res: Response) => {
     for (const item of items) {
       const itemDocId = getDocIdHash({
         chainId: item.chainId,
-        collectionAddress: item.collectionAddress,
-        tokenId: item.tokenId
+        collectionAddress: item.collectionAddress ?? '',
+        tokenId: item.tokenId ?? ''
       });
       const itemRef = topDocRef.collection(REVEALS_ITEMS_SUB_COLL).doc(itemDocId);
       pixelScoreDbBatchHandler.add(itemRef, item, { merge: true });
@@ -615,7 +615,7 @@ async function updateRevealItemsWithRanks(user: string, revealOrderDocRef: Fireb
     const collectionAddress = revealOrderItemData.collectionAddress;
     const tokenId = revealOrderItemData.tokenId;
     // fetch ranking info
-    const rankingData = await getRevealData(user, chainId, collectionAddress, tokenId);
+    const rankingData = await getRevealData(user, chainId, collectionAddress ?? '', tokenId ?? '');
     if (rankingData) {
       pixelScoreDbBatchHandler.add(revealOrderItemDocRef, rankingData, { merge: true });
     } else {
@@ -864,15 +864,26 @@ async function getNfts(query: NftsQuery, minRank: number, maxRank: number): Prom
 
 const removeRankInfo = (tokens: TokenInfo[]) => {
   for (const token of tokens) {
-    if (!token.pixelRankVisible && token.pixelRank && token.pixelRank <= MIN_PIXELRANK_PUBLICLY_VISIBLE) {
+    if (
+      !token.pixelRankVisible &&
+      token.pixelRankBucket &&
+      token.pixelRankBucket > MAX_PIXELRANKBUCKET_PUBLICLY_VISIBLE
+    ) {
       // TODO: look up in reveal items, the token doesn't have the latest
       delete token.pixelRank;
       delete token.pixelScore;
-      // delete token.pixelRankBucket;
       delete token.inCollectionPixelRank;
       delete token.inCollectionPixelScore;
       delete token.rarityScore;
       delete token.rarityRank;
+      delete token.collectionAddress;
+      delete token.collectionName;
+      delete token.collectionBannerImage;
+      delete token.collectionProfileImage;
+      delete token.collectionSlug;
+      delete token.tokenId;
+      delete token.owner;
+      delete token.ownerFetched;
     }
   }
 };

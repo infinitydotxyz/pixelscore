@@ -19,13 +19,13 @@ export interface CollectionInfo {
 
 export interface TokenInfo {
   chainId: string;
-  collectionAddress: string;
+  collectionAddress?: string;
   collectionName?: string;
   collectionBannerImage?: string;
   collectionProfileImage?: string;
   hasBlueCheck?: boolean;
   collectionSlug?: string;
-  tokenId: string;
+  tokenId?: string;
   imageUrl: string;
   rarityScore?: number;
   rarityRank?: number;
@@ -39,6 +39,7 @@ export interface TokenInfo {
   pixelRankRevealer?: string;
   pixelRankRevealedAt?: number;
   owner?: string;
+  ownerFetched?: boolean;
 }
 
 export interface UpdateRankVisibility {
