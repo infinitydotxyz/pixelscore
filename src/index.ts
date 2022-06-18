@@ -23,8 +23,8 @@ import {
   DEFAULT_PAGE_LIMIT,
   getProvider,
   MAX_PIXELRANKBUCKET_PUBLICLY_VISIBLE,
-  PIXELSCORE_PRICE_PER_ITEM,
-  PIXELSCORE_WALLET,
+  PIXELRANK_PRICE_PER_ITEM,
+  PIXELRANK_WALLET,
   RANKINGS_COLL,
   REVEALS_COLL,
   REVEALS_ITEMS_SUB_COLL,
@@ -294,7 +294,7 @@ app.post('/u/:user/reveals', (req: Request, res: Response) => {
     const chainId = data.chainId;
     const revealer = trimLowerCase(user);
     const numItems = data.numItems;
-    const pricePerItem = PIXELSCORE_PRICE_PER_ITEM;
+    const pricePerItem = PIXELRANK_PRICE_PER_ITEM;
     const totalPrice = numItems * pricePerItem;
     const txnHash = data.txnHash;
     const txnStatus = 'pending';
@@ -706,11 +706,11 @@ function isValidRequest(req: Request): boolean {
 
     // check activity
     const activity = data.event.activity[0];
-    if (activity.toAddress.trim().toLowerCase() !== PIXELSCORE_WALLET) {
+    if (activity.toAddress.trim().toLowerCase() !== PIXELRANK_WALLET) {
       console.error('Invalid pixelscore wallet');
       return false;
     }
-    if (activity.value < PIXELSCORE_PRICE_PER_ITEM) {
+    if (activity.value < PIXELRANK_PRICE_PER_ITEM) {
       // todo: multiply by quantity
       console.error('Invalid price');
       return false;
