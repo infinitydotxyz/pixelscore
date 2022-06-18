@@ -104,7 +104,9 @@ async function updateOwners(tokenDocRefs: FirebaseFirestore.DocumentReference[])
       let owner = data?.owner;
       if (!owner && chainId && collectionAddress && tokenId) {
         try {
+          console.log('No owner in infinity firestore for', collectionAddress, tokenId);
           owner = await getErc721Owner({ address: collectionAddress, tokenId, chainId });
+          console.log('Got owner from erc721', owner);
         } catch (e) {
           console.error('Error getting owner from blockchain');
         }
