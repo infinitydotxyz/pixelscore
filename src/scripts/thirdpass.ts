@@ -105,7 +105,7 @@ async function setBlueCheckOnTokens(testRun: boolean) {
 
       try {
         const tokenMergeInfo: Partial<TokenInfo> = {
-          hasBlueCheck: blueChecks.has(tokenInfo.collectionAddress)
+          hasBlueCheck: blueChecks.has(tokenInfo.collectionAddress ?? '')
         };
 
         if (testRun) {

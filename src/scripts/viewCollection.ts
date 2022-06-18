@@ -58,7 +58,7 @@ async function view(cursor: string) {
     console.log('######### tokenInfo');
     console.log(tokenInfo);
 
-    showCollection(tokenInfo.collectionAddress);
+    showCollection(tokenInfo.collectionAddress ?? '');
   }
 }
 

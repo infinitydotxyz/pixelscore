@@ -70,7 +70,7 @@ async function update(testRun: boolean) {
       cursor = tokenDoc.ref.path;
 
       try {
-        const collectionInfo = await _getCollectionInfo(tokenInfo.collectionAddress, testRun);
+        const collectionInfo = await _getCollectionInfo(tokenInfo.collectionAddress ?? '', testRun);
 
         if (collectionInfo) {
           // merge the collectionName and slug to rank col
