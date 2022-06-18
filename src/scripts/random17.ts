@@ -21,7 +21,7 @@ const collectionSet = new Set<string>();
 async function main() {
   console.log('Collecting scores...');
   // await processAllSplits(ALL_SCORES_DIR);
-  await processOneSplit(ALL_SCORES_DIR, 'split_000');
+  await processOneSplit(ALL_SCORES_DIR, 'allScores.csv');
 }
 
 async function processAllSplits(dirPath: string) {
