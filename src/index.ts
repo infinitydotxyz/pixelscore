@@ -868,6 +868,7 @@ const removeRankInfo = (tokens: TokenInfo[]) => {
       // TODO: look up in reveal items, the token doesn't have the latest
       delete token.pixelRank;
       delete token.pixelScore;
+      delete token.pixelRankBucket;
       delete token.inCollectionPixelRank;
       delete token.inCollectionPixelScore;
       delete token.rarityScore;
