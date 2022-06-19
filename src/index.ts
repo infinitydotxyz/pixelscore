@@ -22,7 +22,6 @@ import {
   COLLECTIONS_COLL,
   DEFAULT_PAGE_LIMIT,
   getProvider,
-  MAX_PIXELRANKBUCKET_PUBLICLY_VISIBLE,
   PIXELRANK_PRICE_PER_ITEM,
   PIXELRANK_WALLET,
   RANKINGS_COLL,
@@ -865,11 +864,7 @@ async function getNfts(query: NftsQuery, minRank: number, maxRank: number): Prom
 
 const removeRankInfo = (tokens: TokenInfo[]) => {
   for (const token of tokens) {
-    if (
-      !token.pixelRankVisible &&
-      token.pixelRankBucket &&
-      token.pixelRankBucket > MAX_PIXELRANKBUCKET_PUBLICLY_VISIBLE
-    ) {
+    if (!token.pixelRankVisible) {
       // TODO: look up in reveal items, the token doesn't have the latest
       delete token.pixelRank;
       delete token.pixelScore;
