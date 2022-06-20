@@ -598,13 +598,17 @@ async function updateRevealItemsWithInfo(user: string, revealOrderDocRef: Fireba
     const imageUrl = revealOrderItemData.imageUrl;
     // fetch ranking info
     const rankingData = await getRevealData(user, imageUrl);
-    const chainId = rankingData?.chainId;
-    const collectionAddress = rankingData?.collectionAddress;
-    const tokenId = rankingData?.tokenId;
     if (rankingData) {
-      pixelScoreDbBatchHandler.add(revealOrderItemDocRef, rankingData, { merge: true });
-    } else {
-      console.error('No ranking data found for', chainId, collectionAddress, tokenId, imageUrl);
+      for (const ranking of rankingData) {
+        const chainId = ranking?.chainId;
+        const collectionAddress = ranking?.collectionAddress;
+        const tokenId = ranking?.tokenId;
+        if (ranking) {
+          pixelScoreDbBatchHandler.add(revealOrderItemDocRef, ranking, { merge: true });
+        } else {
+          console.error('No ranking data found for', chainId, collectionAddress, tokenId, imageUrl);
+        }
+      }
     }
   }
   pixelScoreDbBatchHandler.flush().catch((err) => {
@@ -638,28 +642,40 @@ async function updateRevealOrder(webhookData: AlchemyAddressActivityWebHook) {
   }
 }
 
-async function getRevealData(revealer: string, imageUrl: string): Promise<Partial<TokenInfo> | undefined> {
-  const tokenInfo = await getTokenInfo(imageUrl);
-
-  if (tokenInfo) {
-    const rankData: Partial<TokenInfo> = {
-      chainId: tokenInfo.chainId,
-      collectionAddress: tokenInfo.collectionAddress,
-      tokenId: tokenInfo.tokenId,
-      inCollectionPixelScore: tokenInfo.inCollectionPixelScore,
-      inCollectionPixelRank: tokenInfo.inCollectionPixelRank,
-      pixelScore: tokenInfo.pixelScore,
-      pixelRank: tokenInfo.pixelRank,
-      pixelRankBucket: tokenInfo.pixelRankBucket,
-      pixelRankRevealed: true,
-      pixelRankVisible: false,
-      pixelRankRevealer: revealer,
-      pixelRankRevealedAt: Date.now()
-    };
-    return rankData;
+async function getRevealData(revealer: string, imageUrl: string): Promise<Array<Partial<TokenInfo>> | undefined> {
+  const tokens = await getTokenInfo(imageUrl);
+  const results: Array<Partial<TokenInfo>> = [];
+  if (tokens && tokens.length > 0) {
+    for (const tokenInfo of tokens) {
+      if (tokenInfo) {
+        const rankData: Partial<TokenInfo> = {
+          chainId: tokenInfo.chainId,
+          collectionAddress: tokenInfo.collectionAddress,
+          tokenId: tokenInfo.tokenId,
+          collectionBannerImage: tokenInfo.collectionBannerImage,
+          collectionName: tokenInfo.collectionName,
+          collectionSlug: tokenInfo.collectionSlug,
+          collectionProfileImage: tokenInfo.collectionProfileImage,
+          hasBlueCheck: tokenInfo.hasBlueCheck,
+          inCollectionPixelScore: tokenInfo.inCollectionPixelScore,
+          inCollectionPixelRank: tokenInfo.inCollectionPixelRank,
+          pixelScore: tokenInfo.pixelScore,
+          pixelRank: tokenInfo.pixelRank,
+          pixelRankBucket: tokenInfo.pixelRankBucket,
+          pixelRankRevealed: true,
+          pixelRankVisible: false,
+          pixelRankRevealer: revealer,
+          pixelRankRevealedAt: Date.now()
+        };
+        results.push(rankData);
+      } else {
+        console.error('Token info empty for', imageUrl);
+      }
+    }
   } else {
-    console.error('No ranking/more than 1 info found for', imageUrl);
+    console.error('No ranking info found for', imageUrl);
   }
+  return results;
 }
 
 function isValidSignature(rawBody: string, signature: string): boolean {
