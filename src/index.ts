@@ -228,9 +228,9 @@ app.post(
       }
     }
   }),
-  (req: Request, res: Response) => {
+  async (req: Request, res: Response) => {
     try {
-      if (isValidRequest(req)) {
+      if (await isValidRequest(req)) {
         const data = req.body as AlchemyAddressActivityWebHook;
         // first store webhook data in firestore
         const webHookEventId = data.id;
@@ -314,12 +314,7 @@ app.post('/u/:user/reveals', (req: Request, res: Response) => {
     // write items
     const items = data.revealItems as TokenInfo[];
     for (const item of items) {
-      const itemDocId = getDocIdHash({
-        chainId: item.chainId,
-        collectionAddress: item.collectionAddress ?? '',
-        tokenId: item.tokenId ?? ''
-      });
-      const itemRef = topDocRef.collection(REVEALS_ITEMS_SUB_COLL).doc(itemDocId);
+      const itemRef = topDocRef.collection(REVEALS_ITEMS_SUB_COLL).doc();
       pixelScoreDbBatchHandler.add(itemRef, item, { merge: true });
     }
 
@@ -579,7 +574,7 @@ async function updatePendingTxn(
       const updatedStatus = txnSuceeded ? 'success' : 'error';
       if (txnSuceeded) {
         console.log('Txn succeeded on refresh', txnHash);
-        await updateRevealItemsWithRanks(user, revealOrderDocRef);
+        await updateRevealItemsWithInfo(user, revealOrderDocRef);
       } else {
         console.log('Txn failed on refresh', txnHash);
         pixelScoreDbBatchHandler.add(revealOrderDocRef, { txnStatus: updatedStatus }, { merge: true });
@@ -594,21 +589,22 @@ async function updatePendingTxn(
   }
 }
 
-async function updateRevealItemsWithRanks(user: string, revealOrderDocRef: FirebaseFirestore.DocumentReference) {
+async function updateRevealItemsWithInfo(user: string, revealOrderDocRef: FirebaseFirestore.DocumentReference) {
   pixelScoreDbBatchHandler.add(revealOrderDocRef, { txnStatus: 'success' }, { merge: true });
   const revealOrderItems = await revealOrderDocRef.collection(REVEALS_ITEMS_SUB_COLL).limit(REVEAL_ITEMS_LIMIT).get();
   for (const revealOrderItem of revealOrderItems.docs) {
     const revealOrderItemDocRef = revealOrderItem.ref;
     const revealOrderItemData = revealOrderItem.data() as unknown as TokenInfo;
-    const chainId = revealOrderItemData.chainId;
-    const collectionAddress = revealOrderItemData.collectionAddress;
-    const tokenId = revealOrderItemData.tokenId;
+    const imageUrl = revealOrderItemData.imageUrl;
     // fetch ranking info
-    const rankingData = await getRevealData(user, chainId, collectionAddress ?? '', tokenId ?? '');
+    const rankingData = await getRevealData(user, imageUrl);
+    const chainId = rankingData?.chainId;
+    const collectionAddress = rankingData?.collectionAddress;
+    const tokenId = rankingData?.tokenId;
     if (rankingData) {
       pixelScoreDbBatchHandler.add(revealOrderItemDocRef, rankingData, { merge: true });
     } else {
-      console.error('No ranking data found for', chainId, collectionAddress, tokenId);
+      console.error('No ranking data found for', chainId, collectionAddress, tokenId, imageUrl);
     }
   }
   pixelScoreDbBatchHandler.flush().catch((err) => {
@@ -633,7 +629,7 @@ async function updateRevealOrder(webhookData: AlchemyAddressActivityWebHook) {
     const revealOrderDocRef = revealOrderSnapshot.docs[0].ref;
     const revealOrderData = revealOrderSnapshot.docs[0].data as unknown as RevealOrder;
     if (revealOrderData.txnStatus === 'pending') {
-      await updateRevealItemsWithRanks(revealer, revealOrderDocRef);
+      await updateRevealItemsWithInfo(revealer, revealOrderDocRef);
     } else {
       console.log('Reveal already processed or txn failed', txnHash);
     }
@@ -642,21 +638,19 @@ async function updateRevealOrder(webhookData: AlchemyAddressActivityWebHook) {
   }
 }
 
-async function getRevealData(
-  revealer: string,
-  chainId: string,
-  collectionAddress: string,
-  tokenId: string
-): Promise<Partial<TokenInfo> | undefined> {
-  const tokenInfo = await getTokenInfo(chainId, collectionAddress, tokenId);
+async function getRevealData(revealer: string, imageUrl: string): Promise<Partial<TokenInfo> | undefined> {
+  const tokenInfo = await getTokenInfo(imageUrl);
 
   if (tokenInfo) {
     const rankData: Partial<TokenInfo> = {
-      inCollectionPixelScore: tokenInfo?.inCollectionPixelScore,
-      inCollectionPixelRank: tokenInfo?.inCollectionPixelRank,
-      pixelScore: tokenInfo?.pixelScore,
-      pixelRank: tokenInfo?.pixelRank,
-      pixelRankBucket: tokenInfo?.pixelRankBucket,
+      chainId: tokenInfo.chainId,
+      collectionAddress: tokenInfo.collectionAddress,
+      tokenId: tokenInfo.tokenId,
+      inCollectionPixelScore: tokenInfo.inCollectionPixelScore,
+      inCollectionPixelRank: tokenInfo.inCollectionPixelRank,
+      pixelScore: tokenInfo.pixelScore,
+      pixelRank: tokenInfo.pixelRank,
+      pixelRankBucket: tokenInfo.pixelRankBucket,
       pixelRankRevealed: true,
       pixelRankVisible: false,
       pixelRankRevealer: revealer,
@@ -664,7 +658,7 @@ async function getRevealData(
     };
     return rankData;
   } else {
-    console.error('No ranking/more than 1 info found for', chainId, collectionAddress, tokenId);
+    console.error('No ranking/more than 1 info found for', imageUrl);
   }
 }
 
@@ -685,7 +679,7 @@ function isValidSignature(rawBody: string, signature: string): boolean {
   }
 }
 
-function isValidRequest(req: Request): boolean {
+async function isValidRequest(req: Request): Promise<boolean> {
   try {
     const data = req.body as AlchemyAddressActivityWebHook;
 
@@ -705,13 +699,32 @@ function isValidRequest(req: Request): boolean {
 
     // check activity
     const activity = data.event.activity[0];
-    if (activity.toAddress.trim().toLowerCase() !== PIXELRANK_WALLET) {
-      console.error('Invalid pixelscore wallet');
+    const txnHash = activity.hash;
+    const revealOrderRef = pixelScoreDb
+      .collection(REVEALS_COLL)
+      .where('txnHash', '==', txnHash)
+      .where('chainId', '==', alchemyNetworkToChainId(data.event.network));
+    const revealOrderSnapshot = await revealOrderRef.get();
+
+    if (revealOrderSnapshot.size === 1) {
+      const revealOrderData = revealOrderSnapshot.docs[0].data as unknown as RevealOrder;
+      if (revealOrderData.txnStatus === 'pending') {
+        const numItems = revealOrderData.numItems;
+        if (activity.value < PIXELRANK_PRICE_PER_ITEM * numItems) {
+          console.error('Invalid price');
+          return false;
+        }
+      } else {
+        console.log('Reveal already processed or txn failed', txnHash);
+        return false;
+      }
+    } else {
+      console.error('No reveal/more than 1 reveal found for', txnHash);
       return false;
     }
-    if (activity.value < PIXELRANK_PRICE_PER_ITEM) {
-      // todo: multiply by quantity
-      console.error('Invalid price');
+
+    if (activity.toAddress.trim().toLowerCase() !== PIXELRANK_WALLET) {
+      console.error('Invalid pixelscore wallet');
       return false;
     }
     if (activity.asset !== ALCHEMY_WEBHOOK_ASSET_ETH) {
@@ -865,7 +878,6 @@ async function getNfts(query: NftsQuery, minRank: number, maxRank: number): Prom
 const removeRankInfo = (tokens: TokenInfo[]) => {
   for (const token of tokens) {
     if (!token.pixelRankVisible) {
-      // TODO: look up in reveal items, the token doesn't have the latest
       delete token.pixelRank;
       delete token.pixelScore;
       delete token.pixelRankBucket;

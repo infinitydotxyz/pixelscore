@@ -101,20 +101,13 @@ export async function searchCollections(
   };
 }
 
-export const getTokenInfo = async (
-  chainId: string,
-  collectionAddress: string,
-  tokenId: string
-): Promise<TokenInfo | undefined> => {
-  const tokenInfoSnapshot = await pixelScoreDb
-    .collection(RANKINGS_COLL)
-    .where('chainId', '==', chainId)
-    .where('collectionAddress', '==', collectionAddress)
-    .where('tokenId', '==', tokenId)
-    .get();
+export const getTokenInfo = async (imageUrl: string): Promise<TokenInfo | undefined> => {
+  const tokenInfoSnapshot = await pixelScoreDb.collection(RANKINGS_COLL).where('imageUrl', '==', imageUrl).get();
 
   if (tokenInfoSnapshot.size === 1) {
     return tokenInfoSnapshot.docs[0].data() as TokenInfo;
+  } else {
+    console.error('getTokenInfo: no token info found for imageUrl', imageUrl);
   }
 };
 

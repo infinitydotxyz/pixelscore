@@ -6,7 +6,6 @@ import { randomItem } from './main';
 import NotFoundError from './notFound';
 import { normalize } from 'path';
 
-// todo: joe another protocol is possible: 'data:'
 // e.g of data uri: https://etherscan.io/address/0x05a46f1e545526fb803ff974c790acea34d1f2d6
 enum Protocol {
   HTTPS = 'https:',
@@ -90,7 +89,7 @@ export default class MetadataClient {
             const protocol = url.protocol.toLowerCase();
             const protocolConfig = config.protocols[protocol as Protocol];
             if (typeof protocolConfig.transform === 'function') {
-              protocolConfig.transform(options as Options); // TODO: Adi, not sure why I had to cast this.  remove and see error
+              protocolConfig.transform(options as Options);
             } else if (protocolConfig.transform !== null) {
               throw new Error(`Invalid protocol: ${protocol}`);
             }
