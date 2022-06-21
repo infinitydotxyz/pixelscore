@@ -1,11 +1,12 @@
+import { OrderDirection } from '@infinityxyz/lib/types/core';
 import { jsonString, trimLowerCase } from '@infinityxyz/lib/utils';
 import bodyParser from 'body-parser';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
-import { CollectionInfoArray, Nft, TokenInfoArray, UserNftsArray } from 'types/firestore';
+import { CollectionInfoArray, Nft, TokenInfoArray } from 'types/firestore';
 import { startServer } from './server';
-import { CollectionSearchQuery, NftsOrderBy, NftsQuery, UserNftsQuery } from './types/apiQueries';
+import { CollectionSearchQuery, NftsOrderBy, NftsQuery } from './types/apiQueries';
 import {
   AlchemyAddressActivityWebHook,
   CollectionInfo,
@@ -14,7 +15,7 @@ import {
   UpdateRankVisibility,
   UserRecord
 } from './types/main';
-import { getPageUserNftsFromAlchemy, getUserNftsFromAlchemy } from './utils/alchemy';
+import { getUserNftsFromAlchemy } from './utils/alchemy';
 import {
   ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL,
   ALCHEMY_WEBHOOK_ASSET_ETH,
@@ -33,7 +34,7 @@ import {
 } from './utils/constants';
 import { pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
-import { decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
+import { getDocIdHash } from './utils/main';
 import { getTokenInfo, searchCollections, updateTokenInfo } from './utils/pixelstore';
 
 dotenv.config();
@@ -111,9 +112,9 @@ app.get('/nfts', async (req: Request, res: Response) => {
 app.get('/u/:user/nfts', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
   const query = req.query as unknown as NftsQuery;
-  const chainId = '1'; // todo: other chainIds?
-  // const nfts = await getUserNftsFromPixelScoreDb(user, query);
-  const nfts = await getUserNfts(user, chainId, query);
+  // const chainId = '1'; // todo: other chainIds?
+  const nfts = await getUserNftsFromPixelScoreDb(user, query);
+  // const nfts = await getUserNfts(user, chainId, query);
   const resp = {
     ...nfts
   };
@@ -458,58 +459,59 @@ async function getUserNftsFromPixelScoreDb(userAddress: string, query: NftsQuery
   };
 }
 
-// todo: remove when ready
+// don't remove this commented code
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-async function getUserNfts(
-  userAddress: string,
-  chainId: string,
-  query: Pick<UserNftsQuery, 'collectionAddresses' | 'cursor' | 'limit'>
-): Promise<UserNftsArray> {
-  type Cursor = { pageKey?: string; startAtToken?: string };
-  const cursor = decodeCursorToObject<Cursor>(query.cursor);
-  const limit = query.limit + 1;
-  let nfts: Nft[] = [];
-  let alchemyHasNextPage = true;
-  let pageKey = '';
-  let nextPageKey = cursor?.pageKey ?? '';
-  let pageNumber = 0;
-  while (nfts.length < limit && alchemyHasNextPage) {
-    pageKey = nextPageKey;
-    const startAtToken = pageNumber === 0 && cursor.startAtToken ? cursor.startAtToken : undefined;
+// async function getUserNfts(
+//   userAddress: string,
+//   chainId: string,
+//   query: Pick<UserNftsQuery, 'collectionAddresses' | 'cursor' | 'limit'>
+// ): Promise<UserNftsArray> {
+//   type Cursor = { pageKey?: string; startAtToken?: string };
+//   const cursor = decodeCursorToObject<Cursor>(query.cursor);
+//   const limit = query.limit + 1;
+//   let nfts: Nft[] = [];
+//   let alchemyHasNextPage = true;
+//   let pageKey = '';
+//   let nextPageKey = cursor?.pageKey ?? '';
+//   let pageNumber = 0;
+//   while (nfts.length < limit && alchemyHasNextPage) {
+//     pageKey = nextPageKey;
+//     const startAtToken = pageNumber === 0 && cursor.startAtToken ? cursor.startAtToken : undefined;
 
-    const response = await getPageUserNftsFromAlchemy(
-      pageKey,
-      chainId,
-      userAddress,
-      query.collectionAddresses,
-      startAtToken
-    );
-    nfts = [...nfts, ...response.nfts];
-    alchemyHasNextPage = response.hasNextPage;
-    nextPageKey = response.pageKey;
-    pageNumber += 1;
-  }
+//     const response = await getPageUserNftsFromAlchemy(
+//       pageKey,
+//       chainId,
+//       userAddress,
+//       query.collectionAddresses,
+//       startAtToken
+//     );
+//     nfts = [...nfts, ...response.nfts];
+//     alchemyHasNextPage = response.hasNextPage;
+//     nextPageKey = response.pageKey;
+//     pageNumber += 1;
+//   }
 
-  const continueFromCurrentPage = nfts.length > query.limit;
-  const hasNextPage = continueFromCurrentPage || alchemyHasNextPage;
-  let nftsToReturn = nfts.slice(0, query.limit);
-  const nftToStartAt = nfts?.[query.limit]?.tokenId;
+//   const continueFromCurrentPage = nfts.length > query.limit;
+//   const hasNextPage = continueFromCurrentPage || alchemyHasNextPage;
+//   let nftsToReturn = nfts.slice(0, query.limit);
+//   const nftToStartAt = nfts?.[query.limit]?.tokenId;
 
-  // add ranking info for each nft
-  nftsToReturn = await addRankInfoToNFTs(nftsToReturn);
+//   // add ranking info for each nft
+//   nftsToReturn = await addRankInfoToNFTs(nftsToReturn);
 
-  const updatedCursor = encodeCursor({
-    pageKey: nextPageKey,
-    startAtToken: nftToStartAt
-  });
+//   const updatedCursor = encodeCursor({
+//     pageKey: nextPageKey,
+//     startAtToken: nftToStartAt
+//   });
 
-  return {
-    data: nftsToReturn,
-    cursor: updatedCursor,
-    hasNextPage
-  };
-}
+//   return {
+//     data: nftsToReturn,
+//     cursor: updatedCursor,
+//     hasNextPage
+//   };
+// }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function addRankInfoToNFTs(nfts: Nft[]): Promise<Nft[]> {
   const docs: FirebaseFirestore.DocumentReference[] = [];
 
@@ -930,23 +932,38 @@ const getPortfolioScore = async (userAddress: string, chainId: string): Promise<
 
   console.log('Re-calculating portfolio score since something changed since last calculation');
 
-  let nfts: Nft[] = [];
-  let alchemyHasNextPage = true;
-  let pageKey = '';
-  let nextPageKey = '';
-  let totalNftsOwned = 0;
-  while (alchemyHasNextPage) {
-    pageKey = nextPageKey;
-    const response = await getPageUserNftsFromAlchemy(pageKey, chainId, userAddress, []);
-    nfts = [...nfts, ...response.nfts];
-    alchemyHasNextPage = response.hasNextPage;
-    nextPageKey = response.pageKey;
-    // no need to sum here since Alchemy response returns the total number of nfts owned by a user in each pagination result
-    totalNftsOwned = response.totalNftsOwned;
-  }
+  // don't remove the commented code below
+  // let nfts: Nft[] = [];
+  // let alchemyHasNextPage = true;
+  // let pageKey = '';
+  // let nextPageKey = '';
+  // let totalNftsOwned = 0;
+  // while (alchemyHasNextPage) {
+  //   pageKey = nextPageKey;
+  //   const response = await getPageUserNftsFromAlchemy(pageKey, chainId, userAddress, []);
+  //   nfts = [...nfts, ...response.nfts];
+  //   alchemyHasNextPage = response.hasNextPage;
+  //   nextPageKey = response.pageKey;
+  //   // no need to sum here since Alchemy response returns the total number of nfts owned by a user in each pagination result
+  //   totalNftsOwned = response.totalNftsOwned;
+  // }
 
-  // add ranking info for each nft
-  nfts = await addRankInfoToNFTs(nfts);
+  let nfts: TokenInfo[] = [];
+  let hasNextPage = true;
+  let totalNftsOwned = 0;
+  const query: NftsQuery = {
+    minRank: 1,
+    maxRank: 10,
+    limit: 500,
+    orderBy: NftsOrderBy.PixelRank,
+    orderDirection: OrderDirection.Descending
+  };
+  while (hasNextPage) {
+    const response = await getUserNftsFromPixelScoreDb(userAddress, query);
+    nfts = [...nfts, ...response.data];
+    hasNextPage = response.hasNextPage;
+    totalNftsOwned += response.data.length;
+  }
 
   let count = 0;
   let score = 0;
