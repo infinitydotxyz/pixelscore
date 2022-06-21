@@ -9,7 +9,7 @@
     "build": "npm run update:lib && npm run lintfix && rimraf dist && tsc",
     "start": "node dist/src/index.js",
     "update:lib": "npm update @infinityxyz/lib",
-    "deploy": "gcloud app deploy -q --project=pixelscore-9ec2a",
+    "deploy": "npm run build && gcloud app deploy -q --project=pixelscore-9ec2a",
     "lint": "npx eslint --ext=ts .",
     "lintfix": "npx eslint --fix --ext=ts src",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\""
