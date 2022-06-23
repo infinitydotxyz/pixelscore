@@ -1,5 +1,5 @@
 import { OrderDirection } from '@infinityxyz/lib/types/core';
-import { jsonString, trimLowerCase } from '@infinityxyz/lib/utils';
+import { getCollectionDocId, jsonString, trimLowerCase } from '@infinityxyz/lib/utils';
 import bodyParser from 'body-parser';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
@@ -46,6 +46,17 @@ const pixelScoreDbBatchHandler = new FirestoreBatchHandler(pixelScoreDb);
 // ========================================= GET REQUESTS =========================================
 
 // ################################# Public endpoints #################################
+
+app.get('/collection/:chainId/:collectionAddress', async (req: Request, res: Response) => {
+  const chainId = req.params.chainId;
+  const collectionAddress = req.params.collectionAddress;
+
+  const collection = pixelScoreDb.collection(COLLECTIONS_COLL);
+  const docId = getCollectionDocId({ collectionAddress, chainId: chainId });
+  const info = (await collection.doc(docId).get()).data() as CollectionInfo;
+
+  res.send(info);
+});
 
 app.get('/collections', async (req: Request, res: Response) => {
   const query = req.query as unknown as NftsQuery;
