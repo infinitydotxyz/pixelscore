@@ -213,13 +213,15 @@ app.get('/u/:user', async (req: Request, res: Response) => {
   }
 
   const scoreInfo = await getPortfolioScore(user, chainId);
-  userRec.portfolioScore = scoreInfo.portfolioScore / scoreInfo.portfolioScoreNumNfts;
-  userRec.portfolioScoreUpdatedAt = scoreInfo.portfolioScoreUpdatedAt;
-  userRec.portfolioScoreNumNfts = scoreInfo.portfolioScoreNumNfts;
+  if (scoreInfo.portfolioScoreNumNfts > 0) {
+    userRec.portfolioScore = scoreInfo.portfolioScore / scoreInfo.portfolioScoreNumNfts;
+    userRec.portfolioScoreUpdatedAt = scoreInfo.portfolioScoreUpdatedAt;
+    userRec.portfolioScoreNumNfts = scoreInfo.portfolioScoreNumNfts;
 
-  doc.set(userRec, { merge: true }).catch((err) => {
-    console.error('Error while setting user record', user, err);
-  });
+    doc.set(userRec, { merge: true }).catch((err) => {
+      console.error('Error while setting user record', user, err);
+    });
+  }
 
   res.send(userRec);
 });
@@ -445,11 +447,11 @@ async function getUserNftsFromPixelScoreDb(userAddress: string, query: NftsQuery
   let nftsQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = pixelScoreDb.collection(RANKINGS_COLL);
   nftsQuery = nftsQuery
     .where('pixelRank', '>=', minRank)
-    .where('pixelRank', '<', maxRank)
+    .where('pixelRank', '<=', maxRank)
     .where('owner', '==', userAddress);
   nftsQuery = nftsQuery.orderBy(NftsOrderBy.PixelRank, query.orderDirection);
 
-  let cursor = query.cursor;
+  let cursor = query.cursor ?? '';
   if (cursor) {
     const startDoc = await pixelScoreDb.doc(cursor).get();
     nftsQuery = nftsQuery.startAfter(startDoc);
@@ -458,11 +460,13 @@ async function getUserNftsFromPixelScoreDb(userAddress: string, query: NftsQuery
   const results = await nftsQuery.limit(limit).get();
   const hasNextPage = results.size > query.limit;
   const nftsToReturnSnap = results.docs.slice(0, query.limit);
-  const nftsToReturn = nftsToReturnSnap.map((doc) => doc.data() as TokenInfo);
+  const nftsToReturn = nftsToReturnSnap.map((doc) => {
+    cursor = doc.ref.path;
+    return doc.data() as TokenInfo;
+  });
 
   removeRankInfo(nftsToReturn);
 
-  cursor = results.docs[query.limit - 1]?.ref?.path;
   return {
     data: nftsToReturn,
     cursor,
@@ -795,11 +799,8 @@ async function getCollections(query: NftsQuery): Promise<CollectionInfoArray> {
   let cursor = '';
   const results = await nftsQuery.get();
   const data = results.docs.map((item) => {
-    const collection = item.data() as CollectionInfo;
-
     cursor = item.ref.path;
-
-    return collection;
+    return item.data() as CollectionInfo;
   });
 
   const hasNextPage = data.length === query.limit;
