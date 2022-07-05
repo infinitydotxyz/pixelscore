@@ -40,8 +40,8 @@ export const USERS_COLL = 'users';
 export const NFTS_SUB_COLL = 'nfts';
 export const REVEALS_ITEMS_SUB_COLL = 'revealItems';
 
-const ethProvider = new ethers.providers.JsonRpcProvider(process.env.alchemyJsonRpcEthMainnet);
-const polygonProvider = new ethers.providers.JsonRpcProvider(process.env.alchemyJsonRpcPolygonMainnet);
+const ethProvider = new ethers.providers.StaticJsonRpcProvider(process.env.alchemyJsonRpcEthMainnet);
+const polygonProvider = new ethers.providers.StaticJsonRpcProvider(process.env.alchemyJsonRpcPolygonMainnet);
 
 export function getProvider(chainId: string) {
   if (chainId === '1') {
