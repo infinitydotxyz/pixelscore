@@ -111,7 +111,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
 
 function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
   try {
-    console.log('============================== Writing metadata =================================');
+    console.log(`============================== Writing metadata ${dir} =================================`);
     mkdirSync(dir, { recursive: true });
     const metadataFile = path.join(dir, METADATA_FILE_NAME);
     let lines = '';
@@ -126,7 +126,9 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
     });
     // append to file
     appendFileSync(metadataFile, lines);
-    console.log('============================== Metadata written successfully =================================');
+    console.log(
+      `============================== Metadata written successfully ${dir} =================================`
+    );
   } catch (e) {
     console.error('Error in writing metadata', dir, e);
   }
@@ -139,7 +141,9 @@ async function fetchOSImages(
   resizedImagesDir: string
 ) {
   try {
-    console.log('============================== Downloading images =================================');
+    console.log(
+      `============================== Downloading images to ${resizedImagesDir} =================================`
+    );
     mkdirSync(resizedImagesDir, { recursive: true });
     for (const token of tokens.docs) {
       const data = token.data();
@@ -238,7 +242,7 @@ async function validate(
 ): Promise<boolean> {
   try {
     let done = false;
-    console.log('============================== Validating =================================');
+    console.log(`============================== Validating ${chainId}:${address} =================================`);
     const numImages = readdirSync(imagesDir).filter((file) => !file.endsWith('.url') || !file.endsWith('.csv')).length;
     const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
     const numLines = parseInt(execSync(`cat ${metadataFile} | wc -l`).toString().trim());
@@ -249,6 +253,8 @@ async function validate(
         numTokens,
         'num images downloaded',
         numImages,
+        'for',
+        address,
         `waiting ${retryAfter} seconds for download to finish. Ignore any errors for now. Retries left: ${retries}`
       );
       if (retries > 0) {
@@ -258,7 +264,14 @@ async function validate(
       }
     } else if (numLines !== numTokens) {
       // check if num lines in metadata file is equal to numtokens
-      console.error('Not all metadata is written; numTokens', numTokens, 'metadata written for', numLines);
+      console.error(
+        'Not all metadata is written; numTokens',
+        numTokens,
+        'metadata written for',
+        numLines,
+        'for collection',
+        address
+      );
     } else {
       done = true;
     }
