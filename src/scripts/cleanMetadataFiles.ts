@@ -1,13 +1,15 @@
+import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
 const DATA_DIR = '/mnt/disks/additional-disk/data';
+const METADATA_FILE_NAME = 'metadata.csv';
 
 let count = 0;
 function main() {
-  console.log('Counting images...');
+  console.log('Cleaning metadata files...');
   getDirs(DATA_DIR);
-  console.log('Found', count, 'images');
+  console.log('Cleaned', count, 'metadata files');
 }
 
 function getDirs(dirPath: string) {
@@ -19,7 +21,9 @@ function getDirs(dirPath: string) {
   });
 
   files.forEach((file) => {
-    if (!file.endsWith('.url') && !file.endsWith('.csv')) {
+    if (file.includes(METADATA_FILE_NAME)) {
+      execSync('rm ' + path.join(dirPath, file));
+      console.log('Deleted', path.join(dirPath, file));
       count++;
     }
   });
