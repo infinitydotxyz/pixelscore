@@ -106,7 +106,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
 
     // delete metadata.csv
-    execSync(`rm ${metadataFile}`);
+    execSync(`rm -f ${metadataFile}`);
 
     let tokensStartAfter = '';
     let done = false;
