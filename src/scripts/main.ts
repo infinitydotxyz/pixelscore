@@ -202,10 +202,17 @@ async function fetchOSImages(
       // check if file already exists
       if (!existsSync(resizedImageLocalFile)) {
         if (tokenImage.indexOf('lh3') > 0) {
-          const url224 = tokenImage + '=s224';
+          // check if image is already resized
+          let url224 = '';
+          const splits = tokenImage.split('=');
+          if (splits.length > 1) {
+            url224 = splits[0] + '=s224';
+          } else {
+            url224 = tokenImage + '=s224';
+          }
           // console.log('Downloading', url);
-          downloadImage(chainId, collection, tokenId, url224, resizedImageLocalFile).catch((err) =>
-            console.error('error downloading', url224, collection, tokenId, err)
+          downloadImage(chainId, collection, tokenId, url224, resizedImageLocalFile).catch(() =>
+            console.error('error downloading', url224, collection, tokenId)
           );
         } else {
           // console.log('Not OpenSea image for token', tokenId, url, collection);
@@ -220,12 +227,12 @@ async function fetchOSImages(
                 }
               });
             })
-            .catch((err) => console.error('error downloading', tokenImage, collection, tokenId, err));
+            .catch(() => console.error('error downloading', tokenImage, collection, tokenId));
         }
       }
     }
-  } catch (e) {
-    console.error('Error in downloading images from OS for', collection, e);
+  } catch {
+    console.error('Error in downloading images from OS for', collection);
   }
 }
 
