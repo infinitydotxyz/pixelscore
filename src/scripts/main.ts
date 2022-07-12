@@ -1,7 +1,7 @@
 import { DocumentData, QuerySnapshot } from '@google-cloud/firestore';
 import axios from 'axios';
 import { exec, execSync } from 'child_process';
-import { createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { appendFileSync, createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import * as stream from 'stream';
 import { promisify } from 'util';
@@ -124,8 +124,8 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
       }
       lines += `${data.collectionAddress},${data.collectionName},${data.collectionSlug},${data.collectionProfileImage},${data.hasBlueCheck},${data.tokenId},${data.rarityScore},${data.rarityRank},${tokenImage}\n`;
     });
-    // write file
-    writeFileSync(metadataFile, lines);
+    // append to file
+    appendFileSync(metadataFile, lines);
     console.log('============================== Metadata written successfully =================================');
   } catch (e) {
     console.error('Error in writing metadata', dir, e);
