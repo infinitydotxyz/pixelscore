@@ -7,7 +7,7 @@ import * as stream from 'stream';
 import { promisify } from 'util';
 
 import { BaseCollection, BaseToken } from '@infinityxyz/lib/types/core';
-import { infinityDb } from '../utils/firestore';
+import { infinityDb, pixelScoreDb } from '../utils/firestore';
 import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
 
 const infinityDbBatchHandler = new FirestoreBatchHandler(infinityDb);
@@ -33,6 +33,9 @@ async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number
         console.error('Too many NFTs in collection', data.address, data.numNfts);
         continue;
       }
+      // save collection info in pixelScoreDb
+      const docId = `${data.chainId ?? '1'}:${data.address}`;
+      await pixelScoreDb.collection('collections').doc(docId).set(data, { merge: true });
       await run(data.chainId ?? '1', data.address, retries, retryAfter);
     }
   } catch (e) {
