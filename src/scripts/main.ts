@@ -1,7 +1,7 @@
 import { DocumentData, QuerySnapshot } from '@google-cloud/firestore';
 import axios from 'axios';
-import { exec, execSync } from 'child_process';
-import { appendFileSync, createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import { exec } from 'child_process';
+import { appendFileSync, createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import * as stream from 'stream';
 import { promisify } from 'util';
@@ -72,7 +72,6 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     let tokensStartAfter = '';
     let done = false;
     const limit = 1000;
-    let totalTokens = 0;
     while (!done) {
       const tokens = await infinityDb
         .collection('collections')
@@ -83,7 +82,6 @@ async function run(chainId: string, address: string, retries: number, retryAfter
         .limit(limit)
         .get();
 
-      totalTokens += tokens.size;
       tokensStartAfter = tokens.docs[tokens.size - 1].get('tokenId');
 
       // fetch metadata
@@ -98,7 +96,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     }
 
     // validate
-    await validate(totalTokens, resizedImagesDir, metadataDir, chainId, address, retries, retryAfter);
+    // await validate(totalTokens, resizedImagesDir, metadataDir, chainId, address, retries, retryAfter);
 
     // flush
     await infinityDbBatchHandler.flush();
@@ -231,64 +229,64 @@ async function downloadImage(
     });
 }
 
-async function validate(
-  numTokens: number,
-  imagesDir: string,
-  metadataDir: string,
-  chainId: string,
-  address: string,
-  retries: number,
-  retryAfter: number
-): Promise<boolean> {
-  try {
-    let done = false;
-    console.log(`============================== Validating ${chainId}:${address} =================================`);
-    const numImages = readdirSync(imagesDir).filter((file) => !file.endsWith('.url') || !file.endsWith('.csv')).length;
-    const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
-    const numLines = parseInt(execSync(`cat ${metadataFile} | wc -l`).toString().trim());
-    // check if num images downloaded is less than numtokens
-    if (numImages < numTokens) {
-      console.error(
-        'Not all images are downloaded; numTokens',
-        numTokens,
-        'num images downloaded',
-        numImages,
-        'for',
-        address,
-        `waiting ${retryAfter} seconds for download to finish. Ignore any errors for now. Retries left: ${retries}`
-      );
-      if (retries > 0) {
-        console.log(`Retrying in ${retryAfter} seconds`);
-        await sleep(retryAfter * 1000);
-        run(chainId, address, --retries, retryAfter);
-      }
-    } else if (numLines !== numTokens) {
-      // check if num lines in metadata file is equal to numtokens
-      console.error(
-        'Not all metadata is written; numTokens',
-        numTokens,
-        'metadata written for',
-        numLines,
-        'for collection',
-        address
-      );
-    } else {
-      done = true;
-    }
-    return done;
-  } catch (e) {
-    console.error('Error in validating', address, e);
-    return false;
-  }
-}
+// async function validate(
+//   numTokens: number,
+//   imagesDir: string,
+//   metadataDir: string,
+//   chainId: string,
+//   address: string,
+//   retries: number,
+//   retryAfter: number
+// ): Promise<boolean> {
+//   try {
+//     let done = false;
+//     console.log(`============================== Validating ${chainId}:${address} =================================`);
+//     const numImages = readdirSync(imagesDir).filter((file) => !file.endsWith('.url') && !file.endsWith('.csv')).length;
+//     const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
+//     const numLines = parseInt(execSync(`cat ${metadataFile} | wc -l`).toString().trim());
+//     // check if num images downloaded is less than numtokens
+//     if (numImages < numTokens) {
+//       console.error(
+//         'Not all images are downloaded; numTokens',
+//         numTokens,
+//         'num images downloaded',
+//         numImages,
+//         'for',
+//         address,
+//         `waiting ${retryAfter} seconds for download to finish. Ignore any errors for now. Retries left: ${retries}`
+//       );
+//       if (retries > 0) {
+//         console.log(`Retrying in ${retryAfter} seconds`);
+//         await sleep(retryAfter * 1000);
+//         run(chainId, address, --retries, retryAfter);
+//       }
+//     } else if (numLines !== numTokens) {
+//       // check if num lines in metadata file is equal to numtokens
+//       console.error(
+//         'Not all metadata is written; numTokens',
+//         numTokens,
+//         'metadata written for',
+//         numLines,
+//         'for collection',
+//         address
+//       );
+//     } else {
+//       done = true;
+//     }
+//     return done;
+//   } catch (e) {
+//     console.error('Error in validating', address, e);
+//     return false;
+//   }
+// }
 
-async function sleep(duration: number): Promise<void> {
-  return await new Promise<void>((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, duration);
-  });
-}
+// async function sleep(duration: number): Promise<void> {
+//   return await new Promise<void>((resolve) => {
+//     setTimeout(() => {
+//       resolve();
+//     }, duration);
+//   });
+// }
 
 async function main() {
   console.log(
