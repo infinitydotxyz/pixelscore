@@ -112,7 +112,7 @@ export async function transformAlchemyNftToPixelScoreNft(
       rarityRank: nftDto?.rarityRank ?? NaN,
       rarityScore: nftDto?.rarityScore ?? NaN,
       image: {
-        url: (nftDto?.image?.url || alchemyNft?.media?.[0]?.gateway || alchemyNft?.metadata?.image) ?? '',
+        url: nftDto?.image?.url ?? '',
         originalUrl: (nftDto?.image?.originalUrl || alchemyNft?.media?.[0]?.raw || alchemyNft?.metadata?.image) ?? '',
         updatedAt: nftDto?.image?.updatedAt ?? NaN
       },

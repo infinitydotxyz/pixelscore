@@ -97,7 +97,7 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
     let lines = '';
     tokens.forEach((token) => {
       const data = token.data() as BaseToken;
-      const tokenImage = data?.image?.url ?? data?.alchemyCachedImage ?? '';
+      const tokenImage = data?.image?.url || data?.alchemyCachedImage || '';
       if (!data || !tokenImage) {
         console.error('Data is null for token');
         return;
@@ -123,7 +123,7 @@ async function fetchOSImages(
     mkdirSync(resizedImagesDir, { recursive: true });
     for (const token of tokens.docs) {
       const data = token.data();
-      const tokenImage = data?.image?.url ?? data?.alchemyCachedImage ?? '';
+      const tokenImage = data?.image?.url || data?.alchemyCachedImage || '';
       const tokenId = data.tokenId;
       if (!data) {
         console.error('Data is null for token');
