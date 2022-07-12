@@ -1,6 +1,6 @@
 import { sleep } from './main';
 
-const MAX_SIZE = 500;
+const MAX_SIZE = 200;
 
 interface Batch {
   batch: FirebaseFirestore.WriteBatch;

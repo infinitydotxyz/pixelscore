@@ -1,19 +1,17 @@
-import fbAdmin from 'firebase-admin';
+import { DocumentData, QuerySnapshot } from '@google-cloud/firestore';
+import axios from 'axios';
+import { exec, execSync } from 'child_process';
+import { createWriteStream, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import path from 'path';
 import * as stream from 'stream';
 import { promisify } from 'util';
-import axios from 'axios';
-import { createWriteStream, existsSync, readdirSync, mkdirSync, writeFileSync, readFileSync } from 'fs';
-import path from 'path';
-import { QuerySnapshot, DocumentData } from '@google-cloud/firestore';
-import { execSync, exec } from 'child_process';
 
-import serviceAccount from '../../creds/nftc-infinity-firebase-creds.json';
-fbAdmin.initializeApp({
-  credential: fbAdmin.credential.cert(serviceAccount as fbAdmin.ServiceAccount),
-  storageBucket: 'infinity-static'
-});
+import { BaseToken } from '@infinityxyz/lib/types/core';
+import { infinityDb } from '../utils/firestore';
+import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
 
-const db = fbAdmin.firestore();
+const infinityDbBatchHandler = new FirestoreBatchHandler(infinityDb);
+
 // const bucket = fbAdmin.storage().bucket();
 const finished = promisify(stream.finished);
 const DATA_DIR = '/mnt/disks/additional-disk/data';
@@ -31,7 +29,7 @@ async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number
         console.error('Data is null for collection', coll);
         continue;
       }
-      await run(data.chainId, data.address, retries, retryAfter);
+      await run(data.chainId ?? '1', data.address, retries, retryAfter);
     }
   } catch (e) {
     console.error('Error running a few', e);
@@ -41,7 +39,7 @@ async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number
 async function run(chainId: string, address: string, retries: number, retryAfter: number) {
   try {
     console.log(
-      `============ Fetching data for ${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
+      `============ Fetching data for ${chainId}:${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
     );
     // const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
     // check if collection is already downloaded to local file system
@@ -58,14 +56,17 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     //   return;
     // }
 
-    // exception for ENS
-    if (address === '0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85') {
+    // exception for ENS and unstoppable domains
+    if (
+      address === '0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85' ||
+      address === '0x049aba7510f45ba5b64ea9e658e342f904db358d'
+    ) {
       return;
     }
     console.log(
       `============================== Fetching tokens from firestore for ${address} =================================`
     );
-    const tokens = await db.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
+    const tokens = await infinityDb.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
     const numTokens = tokens.size;
 
     // fetch metadata
@@ -74,10 +75,15 @@ async function run(chainId: string, address: string, retries: number, retryAfter
 
     // fetch images
     const resizedImagesDir = path.join(DATA_DIR, address, IMAGES_DIR);
-    await fetchOSImages(address, tokens, resizedImagesDir);
+    await fetchOSImages(chainId, address, tokens, resizedImagesDir);
 
     // validate
     await validate(numTokens, resizedImagesDir, metadataDir, chainId, address, retries, retryAfter);
+
+    // flush
+    await infinityDbBatchHandler.flush();
+
+    console.log(`========================== Finished collection ${chainId}:${address} =============================`);
   } catch (e) {
     console.error('Error in running collection', address, e);
   }
@@ -90,12 +96,13 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
     const metadataFile = path.join(dir, METADATA_FILE_NAME);
     let lines = '';
     tokens.forEach((token) => {
-      const data = token.data();
-      if (!data) {
+      const data = token.data() as BaseToken;
+      const tokenImage = data?.image?.url ?? data?.alchemyCachedImage ?? '';
+      if (!data || !tokenImage) {
         console.error('Data is null for token');
         return;
       }
-      lines += `${data.tokenId},${data.rarityScore},${data.rarityRank},${data.image?.url}\n`;
+      lines += `${data.collectionAddress},${data.collectionName},${data.collectionSlug},${data.collectionProfileImage},${data.hasBlueCheck},${data.tokenId},${data.rarityScore},${data.rarityRank},${tokenImage}\n`;
     });
     // write file
     writeFileSync(metadataFile, lines);
@@ -105,38 +112,43 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
   }
 }
 
-async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentData>, resizedImagesDir: string) {
+async function fetchOSImages(
+  chainId: string,
+  collection: string,
+  tokens: QuerySnapshot<DocumentData>,
+  resizedImagesDir: string
+) {
   try {
     console.log('============================== Downloading images =================================');
     mkdirSync(resizedImagesDir, { recursive: true });
     for (const token of tokens.docs) {
       const data = token.data();
+      const tokenImage = data?.image?.url ?? data?.alchemyCachedImage ?? '';
+      const tokenId = data.tokenId;
       if (!data) {
         console.error('Data is null for token');
         return;
       }
-      if (!data.image || !data.image.url) {
+      if (!tokenImage) {
         console.error('Image is null for token');
         return;
       }
-      const url = token.data().image.url as string;
-      const tokenId = token.data().tokenId;
-      if (!url || !tokenId) {
-        console.error('url or tokenId is null; url:', url, 'tokenId:', tokenId, 'collection:', collection);
+      if (!tokenId) {
+        console.error('TokenId is null for token');
         return;
       }
       const resizedImageLocalFile = path.join(resizedImagesDir, tokenId);
       // check if file already exists
       if (!existsSync(resizedImageLocalFile)) {
-        if (url.indexOf('lh3') > 0) {
-          const url224 = url + '=s224';
+        if (tokenImage.indexOf('lh3') > 0) {
+          const url224 = tokenImage + '=s224';
           // console.log('Downloading', url);
-          downloadImage(url224, resizedImageLocalFile).catch((err) =>
+          downloadImage(chainId, collection, tokenId, url224, resizedImageLocalFile).catch((err) =>
             console.error('error downloading', url224, collection, tokenId, err)
           );
         } else {
           // console.log('Not OpenSea image for token', tokenId, url, collection);
-          downloadImage(url, resizedImageLocalFile)
+          downloadImage(chainId, collection, tokenId, tokenImage, resizedImageLocalFile)
             .then(() => {
               // mogrify
               // console.log('Mogrifying image', url, collection, tokenId);
@@ -147,7 +159,7 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
                 }
               });
             })
-            .catch((err) => console.error('error downloading', url, collection, tokenId, err));
+            .catch((err) => console.error('error downloading', tokenImage, collection, tokenId, err));
         }
       }
     }
@@ -156,9 +168,30 @@ async function fetchOSImages(collection: string, tokens: QuerySnapshot<DocumentD
   }
 }
 
-async function downloadImage(url: string, outputLocationPath: string): Promise<any> {
+async function downloadImage(
+  chainId: string,
+  collection: string,
+  tokenId: string,
+  url: string,
+  outputLocationPath: string
+): Promise<any> {
   // replace hack to handle changed opensea image url
-  url = url.replace('storage.opensea.io', 'openseauserdata.com');
+  if (url.includes('storage.opensea.io')) {
+    console.log(`Token ${collection} ${tokenId} has storage.opensea.io url; updating infinity db`);
+    url = url.replace('storage.opensea.io', 'openseauserdata.com');
+    const tokenDocRef = infinityDb
+      .collection('collections')
+      .doc(`${chainId}:${collection}`)
+      .collection('nfts')
+      .doc(tokenId);
+    const tokenImageData = {
+      image: {
+        url: url
+      }
+    };
+    infinityDbBatchHandler.add(tokenDocRef, tokenImageData, { merge: true });
+  }
+
   const writer = createWriteStream(outputLocationPath);
   return axios({
     method: 'get',
@@ -189,7 +222,7 @@ async function validate(
     const numImages = readdirSync(imagesDir).filter((file) => !file.endsWith('.url') || !file.endsWith('.csv')).length;
     const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
     const numLines = parseInt(execSync(`cat ${metadataFile} | wc -l`).toString().trim());
-    // check if num images downloaded is equal to numtokens
+    // check if num images downloaded is less than numtokens
     if (numImages < numTokens) {
       console.error(
         'Not all images are downloaded; numTokens',
@@ -208,7 +241,6 @@ async function validate(
       console.error('Not all metadata is written; numTokens', numTokens, 'metadata written for', numLines);
     } else {
       done = true;
-      console.log('============================== Done =================================');
     }
     return done;
   } catch (e) {
@@ -256,10 +288,10 @@ async function main() {
     if (existsSync(offsetFile)) {
       startAfter = readFileSync(offsetFile, 'utf8');
     }
-    const limit = 20;
+    const limit = 10;
     let done = false;
     while (!done) {
-      const colls = await db
+      const colls = await infinityDb
         .collection('collections')
         .orderBy('address', 'asc')
         .startAfter(startAfter)
