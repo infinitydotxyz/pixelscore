@@ -71,7 +71,7 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     const resizedImagesDir = path.join(DATA_DIR, address, IMAGES_DIR);
     let tokensStartAfter = '';
     let done = false;
-    const limit = 1000;
+    const limit = 5000;
     while (!done) {
       const tokens = await infinityDb
         .collection('collections')
