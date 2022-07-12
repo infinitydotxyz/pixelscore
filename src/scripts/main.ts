@@ -6,7 +6,7 @@ import path from 'path';
 import * as stream from 'stream';
 import { promisify } from 'util';
 
-import { BaseToken } from '@infinityxyz/lib/types/core';
+import { BaseCollection, BaseToken } from '@infinityxyz/lib/types/core';
 import { infinityDb } from '../utils/firestore';
 import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
 
@@ -24,9 +24,13 @@ const origRetries = 1;
 async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number) {
   try {
     for (const coll of colls.docs) {
-      const data = coll.data();
+      const data = coll.data() as BaseCollection;
       if (!data) {
         console.error('Data is null for collection', coll);
+        continue;
+      }
+      if (data.numNfts >= 250_000) {
+        console.error('Too many NFTs in collection', data.address, data.numNfts);
         continue;
       }
       await run(data.chainId ?? '1', data.address, retries, retryAfter);
