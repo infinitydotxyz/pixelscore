@@ -1,6 +1,6 @@
 import { DocumentData, QuerySnapshot } from '@google-cloud/firestore';
 import axios from 'axios';
-import { exec } from 'child_process';
+import { exec, execSync } from 'child_process';
 import { appendFileSync, createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import * as stream from 'stream';
@@ -103,6 +103,11 @@ async function run(chainId: string, address: string, retries: number, retryAfter
 
     const metadataDir = path.join(DATA_DIR, address, METADATA_DIR);
     const resizedImagesDir = path.join(DATA_DIR, address, IMAGES_DIR);
+    const metadataFile = path.join(metadataDir, METADATA_FILE_NAME);
+
+    // delete metadata.csv
+    execSync(`rm ${metadataFile}`);
+
     let tokensStartAfter = '';
     let done = false;
     const limit = 5000;
