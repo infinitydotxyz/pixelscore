@@ -66,19 +66,39 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     console.log(
       `============================== Fetching tokens from firestore for ${address} =================================`
     );
-    const tokens = await infinityDb.collection('collections').doc(`${chainId}:${address}`).collection('nfts').get();
-    const numTokens = tokens.size;
 
-    // fetch metadata
     const metadataDir = path.join(DATA_DIR, address, METADATA_DIR);
-    fetchMetadata(tokens, metadataDir);
-
-    // fetch images
     const resizedImagesDir = path.join(DATA_DIR, address, IMAGES_DIR);
-    await fetchOSImages(chainId, address, tokens, resizedImagesDir);
+    let tokensStartAfter = '';
+    let done = false;
+    const limit = 1000;
+    let totalTokens = 0;
+    while (!done) {
+      const tokens = await infinityDb
+        .collection('collections')
+        .doc(`${chainId}:${address}`)
+        .collection('nfts')
+        .orderBy('tokenId', 'asc')
+        .startAfter(tokensStartAfter)
+        .limit(limit)
+        .get();
+
+      totalTokens += tokens.size;
+      tokensStartAfter = tokens.docs[tokens.size - 1].get('tokenId');
+
+      // fetch metadata
+      fetchMetadata(tokens, metadataDir);
+
+      // fetch images
+      await fetchOSImages(chainId, address, tokens, resizedImagesDir);
+
+      if (tokens.size < limit) {
+        done = true;
+      }
+    }
 
     // validate
-    await validate(numTokens, resizedImagesDir, metadataDir, chainId, address, retries, retryAfter);
+    await validate(totalTokens, resizedImagesDir, metadataDir, chainId, address, retries, retryAfter);
 
     // flush
     await infinityDbBatchHandler.flush();
@@ -99,7 +119,7 @@ function fetchMetadata(tokens: QuerySnapshot<DocumentData>, dir: string) {
       const data = token.data() as BaseToken;
       const tokenImage = data?.image?.url || data?.alchemyCachedImage || '';
       if (!data || !tokenImage) {
-        console.error('Data is null for token');
+        // console.error('Data is null for token');
         return;
       }
       lines += `${data.collectionAddress},${data.collectionName},${data.collectionSlug},${data.collectionProfileImage},${data.hasBlueCheck},${data.tokenId},${data.rarityScore},${data.rarityRank},${tokenImage}\n`;
@@ -126,15 +146,15 @@ async function fetchOSImages(
       const tokenImage = data?.image?.url || data?.alchemyCachedImage || '';
       const tokenId = data.tokenId;
       if (!data) {
-        console.error('Data is null for token');
+        // console.error('Data is null for token');
         return;
       }
       if (!tokenImage) {
-        console.error('Image is null for token');
+        // console.error('Image is null for token');
         return;
       }
       if (!tokenId) {
-        console.error('TokenId is null for token');
+        // console.error('TokenId is null for token');
         return;
       }
       const resizedImageLocalFile = path.join(resizedImagesDir, tokenId);
