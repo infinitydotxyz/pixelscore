@@ -9,6 +9,7 @@ import { promisify } from 'util';
 import { BaseCollection, BaseToken } from '@infinityxyz/lib/types/core';
 import { infinityDb, pixelScoreDb } from '../utils/firestore';
 import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
+import { CollectionInfo } from 'types/main';
 
 const infinityDbBatchHandler = new FirestoreBatchHandler(infinityDb);
 
@@ -35,7 +36,33 @@ async function runAFew(colls: QuerySnapshot, retries: number, retryAfter: number
       }
       // save collection info in pixelScoreDb
       const docId = `${data.chainId ?? '1'}:${data.address}`;
-      await pixelScoreDb.collection('collections').doc(docId).set(data, { merge: true });
+      const collectionInfo: CollectionInfo = {
+        address: data.address,
+        chainId: data.chainId,
+        tokenStandard: data.tokenStandard,
+        name: data.metadata?.name ?? '',
+        symbol: data.metadata?.symbol ?? '',
+        description: data.metadata?.description ?? '',
+        slug: data.slug ?? '',
+        hasBlueCheck: data.hasBlueCheck ?? false,
+        cardDisplaytype: data.metadata?.displayType ?? '',
+        profileImage: data.metadata?.profileImage ?? '',
+        bannerImage: data.metadata?.bannerImage ?? '',
+        numNfts: data.numNfts,
+        numOwners: data.numOwners,
+        owner: data.owner,
+        deployer: data.deployer,
+        deployedAt: data.deployedAt,
+        twitter: data.metadata?.links?.twitter ?? '',
+        telegram: data.metadata?.links?.telegram ?? '',
+        discord: data.metadata?.links?.discord ?? '',
+        external: data.metadata?.links?.external ?? '',
+        instagram: data.metadata?.links?.instagram ?? '',
+        facebook: data.metadata?.links?.facebook ?? '',
+        medium: data.metadata?.links?.medium ?? '',
+        wiki: data.metadata?.links?.wiki ?? ''
+      };
+      await pixelScoreDb.collection('collections').doc(docId).set(collectionInfo, { merge: true });
       await run(data.chainId ?? '1', data.address, retries, retryAfter);
     }
   } catch (e) {

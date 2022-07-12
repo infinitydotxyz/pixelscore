@@ -15,6 +15,14 @@ export interface CollectionInfo {
   twitter?: string;
   discord?: string;
   external?: string;
+  telegram?: string;
+  medium?: string;
+  wiki?: string;
+  owner?: string;
+  deployer?: string;
+  deployedAt?: number;
+  instagram?: string;
+  facebook?: string;
 }
 
 export interface TokenInfo {
