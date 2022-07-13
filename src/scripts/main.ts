@@ -1,15 +1,15 @@
 import { DocumentData, QuerySnapshot } from '@google-cloud/firestore';
 import axios from 'axios';
-import { exec, execSync } from 'child_process';
+import { execSync } from 'child_process';
 import { appendFileSync, createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import * as stream from 'stream';
 import { promisify } from 'util';
 
 import { BaseCollection, BaseToken } from '@infinityxyz/lib/types/core';
+import { CollectionInfo } from 'types/main';
 import { infinityDb, pixelScoreDb } from '../utils/firestore';
 import FirestoreBatchHandler from '../utils/firestoreBatchHandler';
-import { CollectionInfo } from 'types/main';
 
 const infinityDbBatchHandler = new FirestoreBatchHandler(infinityDb);
 
@@ -214,20 +214,20 @@ async function fetchOSImages(
           downloadImage(chainId, collection, tokenId, url224, resizedImageLocalFile).catch(() =>
             console.error('error downloading', url224, collection, tokenId)
           );
-        } else {
-          // console.log('Not OpenSea image for token', tokenId, url, collection);
-          downloadImage(chainId, collection, tokenId, tokenImage, resizedImageLocalFile)
-            .then(() => {
-              // mogrify
-              // console.log('Mogrifying image', url, collection, tokenId);
-              const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
-              exec(cmd, (err) => {
-                if (err) {
-                  console.error('Error mogrifying', cmd, err);
-                }
-              });
-            })
-            .catch(() => console.error('error downloading', tokenImage, collection, tokenId));
+          // } else {
+          //   // console.log('Not OpenSea image for token', tokenId, url, collection);
+          //   downloadImage(chainId, collection, tokenId, tokenImage, resizedImageLocalFile)
+          //     .then(() => {
+          //       // mogrify
+          //       // console.log('Mogrifying image', url, collection, tokenId);
+          //       const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
+          //       exec(cmd, (err) => {
+          //         if (err) {
+          //           console.error('Error mogrifying', cmd, err);
+          //         }
+          //       });
+          //     })
+          //     .catch(() => console.error('error downloading', tokenImage, collection, tokenId));
         }
       }
     }
