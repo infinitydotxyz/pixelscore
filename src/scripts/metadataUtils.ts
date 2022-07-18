@@ -3,10 +3,8 @@ import { getSearchFriendlyString, trimLowerCase } from '@infinityxyz/lib/utils';
 import { CollectionInfo } from '../types/main';
 import { COLLECTIONS_COLL } from '../utils/constants';
 import { infinityDb } from '../utils/firestore';
-import MnemonicClient, { MnemonicContract } from '../utils/mnemonic';
 import OpenSeaClient from '../utils/opensea';
 
-const mnemonic = new MnemonicClient();
 const opensea = new OpenSeaClient();
 
 export async function getCollectionInfo(collection: string): Promise<CollectionInfo | undefined> {
@@ -16,10 +14,6 @@ export async function getCollectionInfo(collection: string): Promise<CollectionI
     if (!info) {
       // try from opensea
       info = await getCollectionInfoFromOpensea(collection);
-      if (!info) {
-        // try from mnemonic
-        info = await getCollectionInfoFromMnemonic(collection);
-      }
     }
     return info;
   } catch (error) {
@@ -83,32 +77,5 @@ export async function getCollectionInfoFromOpensea(collection: string): Promise<
     console.error('Error getting collection info from opensea:', error);
   }
 
-  return undefined;
-}
-
-export async function getCollectionInfoFromMnemonic(collection: string): Promise<CollectionInfo | undefined> {
-  try {
-    const data = (await mnemonic.getCollection(collection)) as MnemonicContract;
-    if (data) {
-      const info: CollectionInfo = {
-        address: trimLowerCase(data.address),
-        chainId: '1',
-        tokenStandard: 'ERC721',
-        slug: getSearchFriendlyString(data.name),
-        name: data.name,
-        symbol: data.symbol,
-        description: '',
-        profileImage: '',
-        bannerImage: '',
-        cardDisplaytype: '',
-        twitter: '',
-        discord: '',
-        external: ''
-      };
-      return info;
-    }
-  } catch (error) {
-    console.error('Error getting collection info from mnemonic:', error);
-  }
   return undefined;
 }

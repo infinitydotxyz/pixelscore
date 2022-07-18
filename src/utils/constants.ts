@@ -80,11 +80,6 @@ export const OPENSEA_API_KEYS = (() => {
   return apiKeys;
 })();
 
-export const MNEMONIC_API_KEYS = (() => {
-  const apiKeys = getMultipleEnvVariables('MNEMONIC_API_KEY');
-  return apiKeys;
-})();
-
 function getMultipleEnvVariables(prefix: string, minLength = 1): string[] {
   const variables = [];
   let i = 0;

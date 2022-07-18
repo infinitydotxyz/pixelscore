@@ -1,4 +1,4 @@
-import { getCollectionInfoFromMnemonic, getCollectionInfoFromOpensea } from './metadataUtils';
+import { getCollectionInfoFromOpensea } from './metadataUtils';
 import { CollectionInfo, TokenInfo } from 'types/main';
 import { COLLECTIONS_COLL, RANKINGS_COLL } from '../utils/constants';
 import { pixelScoreDb } from '../utils/firestore';
@@ -27,10 +27,7 @@ main();
 async function update(collectionAddress: string) {
   // let collectionInfo = await getCollectionInfo(collectionAddress);
 
-  let collectionInfo = await getCollectionInfoFromOpensea(collectionAddress);
-  if (!collectionInfo) {
-    collectionInfo = await getCollectionInfoFromMnemonic(collectionAddress);
-  }
+  const collectionInfo = await getCollectionInfoFromOpensea(collectionAddress);
 
   if (collectionInfo) {
     console.log(collectionInfo);
