@@ -14,7 +14,7 @@ async function main() {
 
 async function createMetadataFiles(dirPath: string) {
   const dirs = readdirSync(dirPath).filter((file) => statSync(path.join(dirPath, file)).isDirectory());
-  dirs.forEach(async (dir) => {
+  for (const dir of dirs) {
     if (dir.startsWith('0x')) {
       const metadataDir = path.join(dirPath, dir, METADATA_DIR);
       const metadataFile = path.join(metadataDir, METADATA_FILE);
@@ -23,7 +23,7 @@ async function createMetadataFiles(dirPath: string) {
         await fetchMetadata('1', dir, metadataDir);
       }
     }
-  });
+  }
 }
 
 async function fetchMetadata(chainId: string, collection: string, metadataDir: string) {
