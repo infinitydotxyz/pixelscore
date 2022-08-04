@@ -1,7 +1,7 @@
 import { BaseToken } from '@infinityxyz/lib/types/core';
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
-import { infinityDb } from 'utils/firestore';
+import { infinityDb } from '../utils/firestore';
 
 const DATA_DIR = '/mnt/disks/additional-disk/data';
 const METADATA_DIR = 'metadata';
