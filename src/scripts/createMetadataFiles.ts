@@ -1,47 +1,65 @@
+import { BaseToken } from '@infinityxyz/lib/types/core';
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
-import { appendFileSync, readdirSync, readFileSync, existsSync, statSync } from 'fs';
-import { execSync } from 'child_process';
+import { infinityDb } from 'utils/firestore';
 
 const DATA_DIR = '/mnt/disks/additional-disk/data';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE = 'metadata.csv';
-const IMAGES_DIR = 'resized';
-const DUMMY_RARITY = '-123';
 
-function main() {
+async function main() {
   console.log('Creating metadata files...');
-  createMetadataFiles(DATA_DIR);
+  await createMetadataFiles(DATA_DIR);
 }
 
-function createMetadataFiles(dirPath: string) {
+async function createMetadataFiles(dirPath: string) {
   const dirs = readdirSync(dirPath).filter((file) => statSync(path.join(dirPath, file)).isDirectory());
-  dirs.forEach((dir) => {
+  dirs.forEach(async (dir) => {
     if (dir.startsWith('0x')) {
-      // console.log(`Working ${dir}...`);
       const metadataDir = path.join(dirPath, dir, METADATA_DIR);
-      const resizedImagesDir = path.join(dirPath, dir, IMAGES_DIR);
-      // read .url files from resized dir
-      const urlFiles = readdirSync(resizedImagesDir).filter(
-        (file) => statSync(path.join(resizedImagesDir, file)).isFile() && file.endsWith('.url')
-      );
       const metadataFile = path.join(metadataDir, METADATA_FILE);
-      if (urlFiles.length > 0) {
+      if (!existsSync(metadataFile)) {
         // recreate metadata file
-        execSync(`rm ${metadataFile}`);
-        execSync(`touch ${metadataFile}`);
-      }
-      for (const urlFile of urlFiles) {
-        const imageFileName = urlFile.replace('.url', '');
-        const imageFile = path.join(resizedImagesDir, imageFileName);
-        if (existsSync(imageFile)) {
-          const [tokenId, imageUrl] = readFileSync(path.join(resizedImagesDir, urlFile), 'utf8').split(',');
-          appendFileSync(metadataFile, `${tokenId},${DUMMY_RARITY},${DUMMY_RARITY},${imageUrl}\n`);
-        } else {
-          console.error('Missing image:', imageFile);
-        }
+        await fetchMetadata('1', dir, metadataDir);
       }
     }
   });
+}
+
+async function fetchMetadata(chainId: string, collection: string, metadataDir: string) {
+  try {
+    // exception for ENS and unstoppable domains
+    if (
+      collection === '0x57f1887a8bf19b14fc0df6fd9b2acc9af147ea85' ||
+      collection === '0x049aba7510f45ba5b64ea9e658e342f904db358d'
+    ) {
+      return;
+    }
+
+    console.log(`============================== Fetching metadata for ${collection} =================================`);
+    mkdirSync(metadataDir, { recursive: true });
+    const metadataFile = path.join(metadataDir, METADATA_FILE);
+
+    const tokens = await infinityDb.collection('collections').doc(`${chainId}:${collection}`).collection('nfts').get();
+
+    let lines = '';
+    tokens.forEach((token) => {
+      const data = token.data() as BaseToken;
+      const tokenImage = data?.image?.url || data?.alchemyCachedImage || '';
+      if (!data || !tokenImage) {
+        // console.error('Data is null for token');
+        return;
+      }
+      lines += `${data.collectionAddress},${data.collectionName},${data.collectionSlug},${data.collectionProfileImage},${data.hasBlueCheck},${data.tokenId},${data.rarityScore},${data.rarityRank},${tokenImage}\n`;
+    });
+    // append to file
+    writeFileSync(metadataFile, lines);
+    console.log(
+      `============================== Metadata written successfully ${collection} =================================`
+    );
+  } catch (e) {
+    console.error('Error in writing metadata', collection, e);
+  }
 }
 
 main();
