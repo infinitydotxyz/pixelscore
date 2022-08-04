@@ -191,7 +191,7 @@ app.get('/u/:user/reveals', async (req: Request, res: Response) => {
 
 app.get('/u/:user', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
-  const chainId = (req.query.chainId as string) ?? '1';
+  // const chainId = (req.query.chainId as string) ?? '1';
 
   const doc = pixelScoreDb.collection(USERS_COLL).doc(user);
 
@@ -212,16 +212,16 @@ app.get('/u/:user', async (req: Request, res: Response) => {
     userRec.address = user;
   }
 
-  const scoreInfo = await getPortfolioScore(user, chainId);
-  if (scoreInfo.portfolioScoreNumNfts > 0) {
-    userRec.portfolioScore = scoreInfo.portfolioScore / scoreInfo.portfolioScoreNumNfts;
-    userRec.portfolioScoreUpdatedAt = scoreInfo.portfolioScoreUpdatedAt;
-    userRec.portfolioScoreNumNfts = scoreInfo.portfolioScoreNumNfts;
+  // const scoreInfo = await getPortfolioScore(user, chainId);
+  // if (scoreInfo.portfolioScoreNumNfts > 0) {
+  //   userRec.portfolioScore = scoreInfo.portfolioScore / scoreInfo.portfolioScoreNumNfts;
+  //   userRec.portfolioScoreUpdatedAt = scoreInfo.portfolioScoreUpdatedAt;
+  //   userRec.portfolioScoreNumNfts = scoreInfo.portfolioScoreNumNfts;
 
-    doc.set(userRec, { merge: true }).catch((err) => {
-      console.error('Error while setting user record', user, err);
-    });
-  }
+  //   doc.set(userRec, { merge: true }).catch((err) => {
+  //     console.error('Error while setting user record', user, err);
+  //   });
+  // }
 
   res.send(userRec);
 });
@@ -908,6 +908,7 @@ const removeRankInfo = (tokens: TokenInfo[]) => {
 };
 
 // calculate portfolio score if not already done or something changed from last calculcation
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const getPortfolioScore = async (userAddress: string, chainId: string): Promise<UserRecord> => {
   console.log('Fetching portfolio score for', userAddress, chainId);
   const userDoc = pixelScoreDb.collection(USERS_COLL).doc(userAddress);
