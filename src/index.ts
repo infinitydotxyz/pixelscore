@@ -4,9 +4,9 @@ import bodyParser from 'body-parser';
 import { createHmac } from 'crypto';
 import dotenv from 'dotenv';
 import { Express, Request, Response } from 'express';
-import { CollectionInfoArray, Nft, TokenInfoArray } from 'types/firestore';
+import { CollectionInfoArray, Nft, TokenInfoArray, UserNftsArray } from 'types/firestore';
 import { startServer } from './server';
-import { CollectionSearchQuery, NftsOrderBy, NftsQuery } from './types/apiQueries';
+import { CollectionSearchQuery, NftsOrderBy, NftsQuery, UserNftsQuery } from './types/apiQueries';
 import {
   AlchemyAddressActivityWebHook,
   CollectionInfo,
@@ -15,7 +15,7 @@ import {
   UpdateRankVisibility,
   UserRecord
 } from './types/main';
-import { getUserNftsFromAlchemy } from './utils/alchemy';
+import { getPageUserNftsFromAlchemy, getUserNftsFromAlchemy } from './utils/alchemy';
 import {
   ALCHEMY_WEBHOOK_ACTIVITY_CATEGORY_EXTERNAL,
   ALCHEMY_WEBHOOK_ASSET_ETH,
@@ -34,7 +34,7 @@ import {
 } from './utils/constants';
 import { pixelScoreDb } from './utils/firestore';
 import FirestoreBatchHandler from './utils/firestoreBatchHandler';
-import { getDocIdHash } from './utils/main';
+import { decodeCursorToObject, encodeCursor, getDocIdHash } from './utils/main';
 import { getTokenInfo, searchCollections, updateTokenInfo } from './utils/pixelstore';
 
 dotenv.config();
@@ -123,9 +123,9 @@ app.get('/nfts', async (req: Request, res: Response) => {
 app.get('/u/:user/nfts', async (req: Request, res: Response) => {
   const user = trimLowerCase(req.params.user);
   const query = req.query as unknown as NftsQuery;
-  // const chainId = '1'; // todo: other chainIds?
-  const nfts = await getUserNftsFromPixelScoreDb(user, query);
-  // const nfts = await getUserNfts(user, chainId, query);
+  const chainId = '1'; // todo: other chainIds?
+  // const nfts = await getUserNftsFromPixelScoreDb(user, query);
+  const nfts = await getUserNfts(user, chainId, query);
   const resp = {
     ...nfts
   };
@@ -474,57 +474,44 @@ async function getUserNftsFromPixelScoreDb(userAddress: string, query: NftsQuery
   };
 }
 
-// don't remove this commented code
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-// async function getUserNfts(
-//   userAddress: string,
-//   chainId: string,
-//   query: Pick<UserNftsQuery, 'collectionAddresses' | 'cursor' | 'limit'>
-// ): Promise<UserNftsArray> {
-//   type Cursor = { pageKey?: string; startAtToken?: string };
-//   const cursor = decodeCursorToObject<Cursor>(query.cursor);
-//   const limit = query.limit + 1;
-//   let nfts: Nft[] = [];
-//   let alchemyHasNextPage = true;
-//   let pageKey = '';
-//   let nextPageKey = cursor?.pageKey ?? '';
-//   let pageNumber = 0;
-//   while (nfts.length < limit && alchemyHasNextPage) {
-//     pageKey = nextPageKey;
-//     const startAtToken = pageNumber === 0 && cursor.startAtToken ? cursor.startAtToken : undefined;
+async function getUserNfts(
+  userAddress: string,
+  chainId: string,
+  query: Pick<UserNftsQuery, 'collectionAddresses' | 'cursor' | 'limit'>
+): Promise<UserNftsArray> {
+  type Cursor = { pageKey?: string; startAtToken?: string };
+  const cursor = decodeCursorToObject<Cursor>(query.cursor);
+  let pageKey = cursor?.pageKey ?? '';
+  const startAtToken = cursor.startAtToken;
 
-//     const response = await getPageUserNftsFromAlchemy(
-//       pageKey,
-//       chainId,
-//       userAddress,
-//       query.collectionAddresses,
-//       startAtToken
-//     );
-//     nfts = [...nfts, ...response.nfts];
-//     alchemyHasNextPage = response.hasNextPage;
-//     nextPageKey = response.pageKey;
-//     pageNumber += 1;
-//   }
+  const response = await getPageUserNftsFromAlchemy(
+    pageKey,
+    chainId,
+    userAddress,
+    query.collectionAddresses,
+    startAtToken
+  );
 
-//   const continueFromCurrentPage = nfts.length > query.limit;
-//   const hasNextPage = continueFromCurrentPage || alchemyHasNextPage;
-//   let nftsToReturn = nfts.slice(0, query.limit);
-//   const nftToStartAt = nfts?.[query.limit]?.tokenId;
+  let nfts: Nft[] = response.nfts;
+  pageKey = response.pageKey;
+  const hasNextPage = response.hasNextPage;
+  const nftToStartAt = nfts?.[nfts.length - 1]?.tokenId;
 
-//   // add ranking info for each nft
-//   nftsToReturn = await addRankInfoToNFTs(nftsToReturn);
+  // add ranking info for each nft
+  nfts = await addRankInfoToNFTs(nfts);
 
-//   const updatedCursor = encodeCursor({
-//     pageKey: nextPageKey,
-//     startAtToken: nftToStartAt
-//   });
+  const updatedCursor = encodeCursor({
+    pageKey,
+    startAtToken: nftToStartAt
+  });
 
-//   return {
-//     data: nftsToReturn,
-//     cursor: updatedCursor,
-//     hasNextPage
-//   };
-// }
+  return {
+    data: nfts,
+    cursor: updatedCursor,
+    hasNextPage
+  };
+}
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 async function addRankInfoToNFTs(nfts: Nft[]): Promise<Nft[]> {
@@ -542,35 +529,28 @@ async function addRankInfoToNFTs(nfts: Nft[]): Promise<Nft[]> {
 
   if (docs.length > 0) {
     const results = await pixelScoreDb.getAll(...docs);
+    const filtered: Nft[] = [];
 
-    if (results.length === nfts.length) {
-      const filtered: Nft[] = [];
+    for (let i = 0; i < nfts.length; i++) {
+      const n = nfts[i];
+      const ps = results[i].data();
+      if (ps) {
+        // my notes said collectionName was missing. added here
+        n.collectionName = ps.collectionName;
+        n.inCollectionPixelRank = ps.inCollectionPixelRank;
+        n.pixelRank = ps.pixelRank;
+        n.pixelRankBucket = ps.pixelRankBucket;
+        n.pixelScore = ps.pixelScore;
+        n.pixelRankVisible = ps.pixelRankVisible;
+        n.pixelRankRevealer = ps.pixelRankRevealer;
+        n.pixelRankRevealed = ps.pixelRankRevealed;
+        n.inCollectionPixelScore = ps.inCollectionPixelScore;
 
-      for (let i = 0; i < nfts.length; i++) {
-        const n = nfts[i];
-        const ps = results[i].data();
-
-        if (ps) {
-          // my notes said collectionName was missing. added here
-          n.collectionName = ps.collectionName;
-
-          n.inCollectionPixelRank = ps.inCollectionPixelRank;
-          n.pixelRank = ps.pixelRank;
-          n.pixelRankBucket = ps.pixelRankBucket;
-          n.pixelScore = ps.pixelScore;
-          n.pixelRankVisible = ps.pixelRankVisible;
-          n.pixelRankRevealer = ps.pixelRankRevealer;
-          n.pixelRankRevealed = ps.pixelRankRevealed;
-          n.inCollectionPixelScore = ps.inCollectionPixelScore;
-
-          filtered.push(n);
-        }
+        filtered.push(n);
       }
-
-      return filtered;
     }
+    return filtered;
   }
-
   return [];
 }
 
