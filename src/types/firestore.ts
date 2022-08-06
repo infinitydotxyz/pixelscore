@@ -31,6 +31,7 @@ export interface Nft {
 
   rarityScore?: number;
   rarityRank?: number;
+  isPixelRanked?: boolean;
   inCollectionPixelScore?: number;
   inCollectionPixelRank?: number;
   pixelScore?: number;

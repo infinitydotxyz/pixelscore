@@ -1,5 +1,6 @@
 import { TokenStandard } from '@infinityxyz/lib/types/core';
-import { AlchemyNft, AlchemyUserNftsResponse } from '@infinityxyz/lib/types/services/alchemy';
+import { AlchemyNftWithMetadata, AlchemyUserNftsResponse } from '@infinityxyz/lib/types/services/alchemy';
+import { hexToDecimalTokenId } from '@infinityxyz/lib/utils';
 import axios, { AxiosInstance } from 'axios';
 import { BigNumber } from 'ethers';
 import { normalize } from 'path';
@@ -66,7 +67,7 @@ export const getPageUserNftsFromAlchemy = async (
 };
 
 export async function transformAlchemyNftToPixelScoreNft(
-  alchemyNfts: { alchemyNft: AlchemyNft; chainId: string }[]
+  alchemyNfts: { alchemyNft: AlchemyNftWithMetadata; chainId: string }[]
 ): Promise<Array<Nft | null>> {
   const nftRefProps = alchemyNfts.map((item) => {
     return {
@@ -79,7 +80,7 @@ export async function transformAlchemyNftToPixelScoreNft(
 
   return nfts.map((nftDto, index) => {
     const { alchemyNft, chainId } = alchemyNfts[index];
-    const tokenId = BigNumber.from(alchemyNft.id.tokenId).toString();
+    const tokenId = hexToDecimalTokenId(alchemyNft.id.tokenId);
     let metadata = nftDto?.metadata;
     if (!('metadata' in alchemyNft)) {
       return nftDto || null;
@@ -95,9 +96,9 @@ export async function transformAlchemyNftToPixelScoreNft(
       ...nftDto,
       hasBlueCheck: nftDto?.hasBlueCheck ?? false,
       collectionAddress: alchemyNft.contract.address,
-      collectionName: nftDto?.collectionName,
-      collectionBannerImage: nftDto?.collectionBannerImage,
-      collectionProfileImage: nftDto?.collectionProfileImage,
+      collectionName: nftDto?.collectionName ?? '',
+      collectionBannerImage: nftDto?.collectionBannerImage ?? '',
+      collectionProfileImage: nftDto?.collectionProfileImage ?? '',
       chainId: chainId,
       slug: nftDto?.slug ?? '',
       tokenId: tokenId,
@@ -112,7 +113,7 @@ export async function transformAlchemyNftToPixelScoreNft(
       rarityRank: nftDto?.rarityRank ?? NaN,
       rarityScore: nftDto?.rarityScore ?? NaN,
       image: {
-        url: nftDto?.image?.url ?? '',
+        url: nftDto?.image?.url ?? alchemyNft.media?.[0].gateway ?? '',
         originalUrl: (nftDto?.image?.originalUrl || alchemyNft?.media?.[0]?.raw || alchemyNft?.metadata?.image) ?? '',
         updatedAt: nftDto?.image?.updatedAt ?? NaN
       },

@@ -529,13 +529,12 @@ async function addRankInfoToNFTs(nfts: Nft[]): Promise<Nft[]> {
 
   if (docs.length > 0) {
     const results = await pixelScoreDb.getAll(...docs);
-    const filtered: Nft[] = [];
 
     for (let i = 0; i < nfts.length; i++) {
       const n = nfts[i];
       const ps = results[i].data();
       if (ps) {
-        // my notes said collectionName was missing. added here
+        n.isPixelRanked = true;
         n.collectionName = ps.collectionName;
         n.inCollectionPixelRank = ps.inCollectionPixelRank;
         n.pixelRank = ps.pixelRank;
@@ -545,11 +544,11 @@ async function addRankInfoToNFTs(nfts: Nft[]): Promise<Nft[]> {
         n.pixelRankRevealer = ps.pixelRankRevealer;
         n.pixelRankRevealed = ps.pixelRankRevealed;
         n.inCollectionPixelScore = ps.inCollectionPixelScore;
-
-        filtered.push(n);
+      } else {
+        n.isPixelRanked = false;
       }
     }
-    return filtered;
+    return nfts;
   }
   return [];
 }
