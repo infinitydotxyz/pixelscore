@@ -9,6 +9,8 @@ const DATA_DIR = '/mnt/disks/additional-disk/data';
 const METADATA_DIR = 'metadata';
 const METADATA_FILE = 'metadata.csv';
 
+let totalSoFar = 0;
+
 async function main() {
   console.log('Creating missing metadata files...');
   const missingFile = path.join(DISK_DIR, MISSING_FILE);
@@ -53,6 +55,9 @@ async function fetchMetadata(chainId: string, collection: string, metadataDir: s
     writeFileSync(metadataFile, lines);
     console.log(
       `============================== Metadata written successfully ${collection} =================================`
+    );
+    console.log(
+      `====================================== Total so far ${++totalSoFar} =========================================`
     );
   } catch (e) {
     console.error('Error in writing metadata', collection, e);
