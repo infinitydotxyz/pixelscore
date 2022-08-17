@@ -43,7 +43,7 @@ async function fetchMetadata(chainId: string, collection: string, metadataDir: s
     const tokens = await infinityDb.collection('collections').doc(`${chainId}:${collection}`).collection('nfts').get();
 
     let lines = '';
-    tokens.forEach((token) => {
+    for (const token of tokens.docs) {
       const data = token.data() as BaseToken;
       const tokenImage = data?.image?.url || data?.alchemyCachedImage || '';
       if (!data || !tokenImage) {
@@ -51,8 +51,8 @@ async function fetchMetadata(chainId: string, collection: string, metadataDir: s
         return;
       }
       lines += `${data.collectionAddress},${data.collectionName},${data.collectionSlug},${data.collectionProfileImage},${data.hasBlueCheck},${data.tokenId},${data.rarityScore},${data.rarityRank},${tokenImage}\n`;
-    });
-    // append to file
+    }
+    // write file
     writeFileSync(metadataFile, lines);
     console.log(
       `============================== Metadata written successfully ${collection} =================================`
