@@ -1,7 +1,7 @@
 import { BaseToken } from '@infinityxyz/lib/types/core';
 import { mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
-import { infinityDb } from '../utils/firestore';
+import { infinityDb, pixelScoreDb } from '../utils/firestore';
 
 const DISK_DIR = '/mnt/disks/additional-disk';
 const MISSING_FILE = 'missing.csv';
@@ -39,7 +39,12 @@ async function fetchMetadata(chainId: string, collection: string, metadataDir: s
     mkdirSync(metadataDir, { recursive: true });
     const metadataFile = path.join(metadataDir, METADATA_FILE);
 
-    const tokens = await infinityDb.collection('collections').doc(`${chainId}:${collection}`).collection('nfts').get();
+    let tokens = await infinityDb.collection('collections').doc(`${chainId}:${collection}`).collection('nfts').get();
+    // fetch from pixelscore db if not found in infinity db
+    if (tokens.empty) {
+      console.log(`No tokens found for ${collection} in Infinity db. Fetching from pixelscore db...`);
+      tokens = await pixelScoreDb.collection('rankings').where('collectionAddress', '==', collection).get();
+    }
 
     let lines = '';
     for (const token of tokens.docs) {
@@ -49,7 +54,9 @@ async function fetchMetadata(chainId: string, collection: string, metadataDir: s
         // console.error('Data is null for token');
         return;
       }
-      lines += `${data.collectionAddress},${data.collectionName},${data.collectionSlug},${data.collectionProfileImage},${data.hasBlueCheck},${data.tokenId},${data.rarityScore},${data.rarityRank},${tokenImage}\n`;
+      const rarityScore = data.rarityScore ?? NaN;
+      const rarityRank = data.rarityRank ?? NaN;
+      lines += `${data.collectionAddress},${data.collectionName},${data.collectionSlug},${data.collectionProfileImage},${data.hasBlueCheck},${data.tokenId},${rarityScore},${rarityRank},${tokenImage}\n`;
     }
     // write file
     writeFileSync(metadataFile, lines);
