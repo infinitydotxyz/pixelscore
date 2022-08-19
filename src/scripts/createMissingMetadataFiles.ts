@@ -49,8 +49,8 @@ async function fetchMetadata(chainId: string, collection: string, metadataDir: s
     let lines = '';
     for (const token of tokens.docs) {
       const data = token.data() as BaseToken;
-      const tokenImage = data?.image?.url || data?.alchemyCachedImage || '';
-      if (!data || !tokenImage) {
+      const tokenImage = data?.image?.url || data?.alchemyCachedImage || (data as any)?.imageUrl || '';
+      if (!data || !tokenImage || !data.tokenId) {
         // console.error('Data is null for token');
         return;
       }
