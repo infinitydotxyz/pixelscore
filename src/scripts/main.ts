@@ -1,6 +1,6 @@
 import { DocumentData, QuerySnapshot } from '@google-cloud/firestore';
 import axios from 'axios';
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
 import { appendFileSync, createWriteStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import path from 'path';
 import * as stream from 'stream';
@@ -75,20 +75,20 @@ async function run(chainId: string, address: string, retries: number, retryAfter
     console.log(
       `============ Fetching data for ${chainId}:${address} with max ${retries} retries and ${retryAfter} second retry interval ============`
     );
-    // const collectionDoc = await db.collection('collections').doc(`${chainId}:${address}`).get();
+    const collectionDoc = await infinityDb.collection('collections').doc(`${chainId}:${address}`).get();
     // check if collection is already downloaded to local file system
-    // const collectionDir = path.join(DATA_DIR, address);
-    // if (retries === origRetries && existsSync(collectionDir)) {
-    //   console.log('Collection', address, 'already downloaded. Skipping for now');
-    //   return;
-    // }
+    const collectionDir = path.join(DATA_DIR, address);
+    if (retries === origRetries && existsSync(collectionDir)) {
+      console.log('Collection', address, 'already downloaded. Skipping for now');
+      return;
+    }
 
     // check if collection indexing is complete
-    // const status = collectionDoc?.data()?.state.create.step;
-    // if (status !== 'complete') {
-    //   console.error('Collection indexing is not complete for', address);
-    //   return;
-    // }
+    const status = collectionDoc?.data()?.state.create.step;
+    if (status !== 'complete') {
+      console.error('Collection indexing is not complete for', address);
+      return;
+    }
 
     // exception for ENS and unstoppable domains
     if (
@@ -214,20 +214,20 @@ async function fetchOSImages(
           downloadImage(chainId, collection, tokenId, url224, resizedImageLocalFile).catch(() =>
             console.error('error downloading', url224, collection, tokenId)
           );
-          // } else {
-          //   // console.log('Not OpenSea image for token', tokenId, url, collection);
-          //   downloadImage(chainId, collection, tokenId, tokenImage, resizedImageLocalFile)
-          //     .then(() => {
-          //       // mogrify
-          //       // console.log('Mogrifying image', url, collection, tokenId);
-          //       const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
-          //       exec(cmd, (err) => {
-          //         if (err) {
-          //           console.error('Error mogrifying', cmd, err);
-          //         }
-          //       });
-          //     })
-          //     .catch(() => console.error('error downloading', tokenImage, collection, tokenId));
+        } else {
+          // console.log('Not OpenSea image for token', tokenId, url, collection);
+          downloadImage(chainId, collection, tokenId, tokenImage, resizedImageLocalFile)
+            .then(() => {
+              // mogrify
+              // console.log('Mogrifying image', url, collection, tokenId);
+              const cmd = `mogrify -resize 224x224^ -gravity center -extent 224x224 ${resizedImageLocalFile}`;
+              exec(cmd, (err) => {
+                if (err) {
+                  console.error('Error mogrifying', cmd, err);
+                }
+              });
+            })
+            .catch(() => console.error('error downloading', tokenImage, collection, tokenId));
         }
       }
     }
@@ -244,21 +244,21 @@ async function downloadImage(
   outputLocationPath: string
 ): Promise<any> {
   // replace hack to handle changed opensea image url
-  if (url.includes('storage.opensea.io')) {
-    console.log(`Token ${collection} ${tokenId} has storage.opensea.io url; updating infinity db`);
-    url = url.replace('storage.opensea.io', 'openseauserdata.com');
-    const tokenDocRef = infinityDb
-      .collection('collections')
-      .doc(`${chainId}:${collection}`)
-      .collection('nfts')
-      .doc(tokenId);
-    const tokenImageData = {
-      image: {
-        url: url
-      }
-    };
-    infinityDbBatchHandler.add(tokenDocRef, tokenImageData, { merge: true });
-  }
+  // if (url.includes('storage.opensea.io')) {
+  //   console.log(`Token ${collection} ${tokenId} has storage.opensea.io url; updating infinity db`);
+  //   url = url.replace('storage.opensea.io', 'openseauserdata.com');
+  //   const tokenDocRef = infinityDb
+  //     .collection('collections')
+  //     .doc(`${chainId}:${collection}`)
+  //     .collection('nfts')
+  //     .doc(tokenId);
+  //   const tokenImageData = {
+  //     image: {
+  //       url: url
+  //     }
+  //   };
+  //   infinityDbBatchHandler.add(tokenDocRef, tokenImageData, { merge: true });
+  // }
 
   const writer = createWriteStream(outputLocationPath);
   return axios({
